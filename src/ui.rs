@@ -4,8 +4,6 @@ use egui::RichText;
 use crate::themes::CodeTheme;
 
 pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ctx: &egui::Context, file_to_load: &mut Option<PathBuf>) {
-    
-    use rfd::FileDialog;
 
     // Modern app branding
     ui.horizontal(|ui| {
@@ -26,42 +24,23 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
         // Open File button
         let mut open_button = egui::Button::new(RichText::new("📂 Open File").strong());
         open_button = open_button.fill(egui::Color32::from_rgb(34, 197, 94)); // Green
-        if ui.add(open_button).clicked()
-            && let Some(path) = FileDialog::new()
-                .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
-                .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
-                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
-                .pick_file()
-        {
-            *file_to_load = Some(path);
+        if ui.add(open_button).clicked() {
+            app.start_open_file_dialog();
         }
 
-        // Recent Files button
-        ui.menu_button(RichText::new("📋 Recent Files").strong(), |ui| {
-            ui.set_min_width(480.0);
-            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-            if app.recent_files.is_empty() {
-                ui.label(RichText::new("No recent files").weak());
-            }
-            for file in app.recent_files.clone().into_iter().rev() {
-                let display = file.to_string_lossy();
-                if ui
-                    .button(egui::RichText::new(display.clone()).monospace())
-                    .on_hover_text(display)
-                    .clicked()
-                {
-                    *file_to_load = Some(file);
-                    ui.close_menu();
-                }
-            }
-            ui.separator();
-            let mut clear_button = egui::Button::new(RichText::new("🗑️ Clear Recent Files"));
-            clear_button = clear_button.fill(egui::Color32::from_rgb(239, 68, 68)); // Red
-            if ui.add(clear_button).clicked() {
-                app.recent_files.clear();
-                ui.close_menu();
-            }
-        });
+        // Recent Files window toggle
+        let mut recent_button = egui::Button::new(RichText::new("📋 Recent Files").strong());
+        recent_button = recent_button.fill(egui::Color32::from_rgb(59, 130, 246)); // Blue
+        if ui.add(recent_button).clicked() {
+            app.show_recent_window = !app.show_recent_window;
+        }
+
+        // Global Search window toggle
+        let mut global_button = egui::Button::new(RichText::new("🔎 Global Search").strong());
+        global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
+        if ui.add(global_button).clicked() {
+            app.show_global_search_window = !app.show_global_search_window;
+        }
 
         // Themes button
         ui.menu_button(RichText::new("🎨 Themes").strong(), |ui| {
@@ -343,5 +322,93 @@ pub(crate) fn status_extra(ui: &mut egui::Ui, app: &mut crate::app::FileViewerAp
             }
         });
     });
+}
+
+pub(crate) fn recent_files_window(ctx: &egui::Context, app: &mut crate::app::FileViewerApp, file_to_load: &mut Option<PathBuf>) {
+    if !app.show_recent_window { return; }
+    let mut open_flag = app.show_recent_window;
+    egui::Window::new("Recent Files")
+        .open(&mut open_flag)
+        .collapsible(false)
+        .resizable(true)
+        .default_width(520.0)
+        .show(ctx, |ui| {
+            ui.set_min_width(480.0);
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
+            egui::ScrollArea::vertical().max_height(300.0).show(ui, |ui| {
+                if app.recent_files.is_empty() {
+                    ui.label(RichText::new("No recent files").weak());
+                }
+                for file in app.recent_files.clone().into_iter().rev() {
+                    let display = file.to_string_lossy();
+                    if ui.button(egui::RichText::new(display.clone()).monospace()).on_hover_text(display).clicked() {
+                        *file_to_load = Some(file);
+                        // Auto-close window on selection
+                        app.show_recent_window = false;
+                    }
+                }
+            });
+            ui.separator();
+            let mut clear_button = egui::Button::new(RichText::new("🗑️ Clear Recent Files"));
+            let clear_color = egui::Color32::from_rgb(239, 68, 68);
+            if ui.add(clear_button.fill(clear_color)).clicked() {
+                app.recent_files.clear();
+                app.show_recent_window = false;
+            }
+        });
+    app.show_recent_window = open_flag;
+}
+
+pub(crate) fn global_search_window(ctx: &egui::Context, app: &mut crate::app::FileViewerApp) {
+    if !app.show_global_search_window { return; }
+    let mut open_flag = app.show_global_search_window;
+    egui::Window::new("Global Search")
+        .open(&mut open_flag)
+        .collapsible(false)
+        .resizable(true)
+        .default_width(720.0)
+        .show(ctx, |ui| {
+            ui.vertical(|ui| {
+                ui.horizontal(|ui| {
+                    let resp = ui.text_edit_singleline(&mut app.global_query);
+                    if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                        app.recompute_global_search();
+                    }
+                    if ui.button(RichText::new("Search").strong()).clicked() {
+                        app.recompute_global_search();
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.checkbox(&mut app.global_case_sensitive, "Case sensitive");
+                    ui.checkbox(&mut app.global_whole_word, "Whole word");
+                });
+                ui.separator();
+                egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                    for (idx, res) in app.global_results.clone().into_iter().enumerate() {
+                        let label = format!("{}:{} — {}", res.path.to_string_lossy(), res.line_index + 1, res.snippet);
+                        if ui.selectable_label(false, egui::RichText::new(label).monospace()).clicked() {
+                            // Switch to tab
+                            app.switch_to_text_tab(res.tab_index);
+                            // Set local search state and jump
+                            app.search_query = app.global_query.clone();
+                            if let Some(active) = app.active_text_tab {
+                                if let Some(tab) = app.open_text_tabs.get(active) {
+                                    app.search_count = crate::search::recompute_count(&app.search_query, &tab.text);
+                                }
+                            }
+                            app.search_current = res.match_index_in_tab.min(app.search_count.saturating_sub(1));
+                            app.scroll_target_line = Some(res.line_index);
+                            // Close window
+                            app.show_global_search_window = false;
+                        }
+                        if idx < app.global_results.len().saturating_sub(1) { ui.separator(); }
+                    }
+                    if app.global_results.is_empty() && !app.global_query.is_empty() {
+                        ui.label(RichText::new("No results").weak());
+                    }
+                });
+            });
+        });
+    app.show_global_search_window = open_flag;
 }
 

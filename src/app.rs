@@ -6,6 +6,8 @@ use egui::{text::LayoutJob, RichText, TextureHandle};
 use std::fs;
 use rfd::FileDialog;
 use std::path::PathBuf;
+use std::sync::mpsc::{channel, Receiver, TryRecvError};
+use std::thread;
 
 const MAX_FILE_SIZE_BYTES: u64 = 10_000_000; // 10MB
 const MAX_RECENT_FILES: usize = 10;
@@ -15,6 +17,23 @@ pub(crate) const HIGHLIGHT_CHAR_THRESHOLD: usize = 200_000; // Disable syntax/ma
 pub enum Content {
     Text(String),
     Image(TextureHandle),
+}
+
+#[derive(Clone)]
+pub struct TextTab {
+    pub path: PathBuf,
+    pub text: String,
+    pub is_lossy: bool,
+    pub line_count: usize,
+}
+
+#[derive(Clone)]
+pub struct GlobalSearchResult {
+    pub tab_index: usize,
+    pub path: PathBuf,
+    pub line_index: usize,
+    pub snippet: String,
+    pub match_index_in_tab: usize,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
@@ -43,6 +62,11 @@ pub struct FileViewerApp {
     pub(crate) text_line_count: usize,
     #[serde(skip)]
     pub(crate) text_is_lossy: bool,
+    // Tabs: keep opened text files for global search and fast switching
+    #[serde(skip)]
+    pub(crate) open_text_tabs: Vec<TextTab>,
+    #[serde(skip)]
+    pub(crate) active_text_tab: Option<usize>,
     // Simple find state
     #[serde(skip)]
     pub(crate) search_query: String,
@@ -52,6 +76,28 @@ pub struct FileViewerApp {
     pub(crate) search_count: usize,
     #[serde(skip)]
     pub(crate) search_current: usize,
+    // Optional direct scroll target line for precise jumps
+    #[serde(skip)]
+    pub(crate) scroll_target_line: Option<usize>,
+    // Recent files window toggle
+    #[serde(skip)]
+    pub(crate) show_recent_window: bool,
+    // Global search UI state
+    #[serde(skip)]
+    pub(crate) show_global_search_window: bool,
+    #[serde(skip)]
+    pub(crate) global_query: String,
+    #[serde(skip)]
+    pub(crate) global_case_sensitive: bool,
+    #[serde(skip)]
+    pub(crate) global_whole_word: bool,
+    #[serde(skip)]
+    pub(crate) global_results: Vec<GlobalSearchResult>,
+    // Non-blocking file dialog
+    #[serde(skip)]
+    pub(crate) file_open_rx: Option<Receiver<Option<PathBuf>>>,
+    #[serde(skip)]
+    pub(crate) file_open_in_flight: bool,
 }
 
 impl FileViewerApp {
@@ -64,18 +110,40 @@ impl FileViewerApp {
             app.text_is_big = false;
             app.text_line_count = 0;
             app.text_is_lossy = false;
+            app.open_text_tabs = Vec::new();
+            app.active_text_tab = None;
             app.search_query = String::new();
             app.search_active = false;
             app.search_count = 0;
+            app.scroll_target_line = None;
+            app.show_recent_window = false;
+            app.show_global_search_window = false;
+            app.global_query = String::new();
+            app.global_case_sensitive = false;
+            app.global_whole_word = false;
+            app.global_results = Vec::new();
+            app.file_open_rx = None;
+            app.file_open_in_flight = false;
             return app;
         }
         if let Some(mut app) = crate::settings::load_settings_from_disk() {
             app.text_is_big = false;
             app.text_line_count = 0;
             app.text_is_lossy = false;
+            app.open_text_tabs = Vec::new();
+            app.active_text_tab = None;
             app.search_query = String::new();
             app.search_active = false;
             app.search_count = 0;
+            app.scroll_target_line = None;
+            app.show_recent_window = false;
+            app.show_global_search_window = false;
+            app.global_query = String::new();
+            app.global_case_sensitive = false;
+            app.global_whole_word = false;
+            app.global_results = Vec::new();
+            app.file_open_rx = None;
+            app.file_open_in_flight = false;
             return app;
         }
         Default::default()
@@ -183,6 +251,21 @@ impl FileViewerApp {
                     self.text_is_big = text.len() >= BIG_TEXT_CHAR_THRESHOLD || lines >= 50_000;
                     self.text_line_count = lines;
                     self.text_is_lossy = lossy;
+                    // Update or insert text tab
+                    let mut tab_idx_opt = None;
+                    for (idx, t) in self.open_text_tabs.iter().enumerate() {
+                        if t.path == path { tab_idx_opt = Some(idx); break; }
+                    }
+                    match tab_idx_opt {
+                        Some(idx) => {
+                            self.open_text_tabs[idx] = TextTab { path: path.clone(), text: text.clone(), is_lossy: lossy, line_count: lines };
+                            self.active_text_tab = Some(idx);
+                        }
+                        None => {
+                            self.open_text_tabs.push(TextTab { path: path.clone(), text: text.clone(), is_lossy: lossy, line_count: lines });
+                            self.active_text_tab = Some(self.open_text_tabs.len() - 1);
+                        }
+                    }
                     Ok(Content::Text(text))
                 }
                 Err(e) => Err(e),
@@ -207,6 +290,78 @@ impl FileViewerApp {
         }
     }
 
+    pub(crate) fn start_open_file_dialog(&mut self) {
+        if self.file_open_in_flight { return; }
+        self.file_open_in_flight = true;
+        let (tx, rx) = channel::<Option<PathBuf>>();
+        self.file_open_rx = Some(rx);
+        thread::spawn(move || {
+            let picked = FileDialog::new()
+                .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
+                .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
+                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
+                .pick_file();
+            let _ = tx.send(picked);
+        });
+    }
+
+    pub(crate) fn switch_to_text_tab(&mut self, tab_index: usize) {
+        if let Some(tab) = self.open_text_tabs.get(tab_index).cloned() {
+            self.active_text_tab = Some(tab_index);
+            self.current_path = Some(tab.path.clone());
+            self.text_is_big = tab.text.len() >= BIG_TEXT_CHAR_THRESHOLD || tab.line_count >= 50_000;
+            self.text_line_count = tab.line_count;
+            self.text_is_lossy = tab.is_lossy;
+            self.content = Some(Content::Text(tab.text));
+        }
+    }
+
+    pub(crate) fn recompute_global_search(&mut self) {
+        self.global_results.clear();
+        let q = self.global_query.clone();
+        if q.is_empty() { return; }
+        for (tab_idx, tab) in self.open_text_tabs.iter().enumerate() {
+            let mut match_counter_in_tab: usize = 0;
+            for (line_idx, line) in tab.text.lines().enumerate() {
+                let mut hay = line.to_string();
+                let mut needle = q.clone();
+                if !self.global_case_sensitive {
+                    hay = hay.to_ascii_lowercase();
+                    needle = needle.to_ascii_lowercase();
+                }
+                let mut offset_in_line: usize = 0;
+                let original_line = line;
+                while let Some(pos) = hay[offset_in_line..].find(&needle) {
+                    let abs_pos = offset_in_line + pos;
+                    // Whole-word check
+                    if self.global_whole_word {
+                        let left_ok = abs_pos == 0 || !original_line.chars().nth(abs_pos - 1).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                        let right_index = abs_pos + q.len();
+                        let right_ok = right_index >= original_line.len() || !original_line.chars().nth(right_index).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
+                        if !(left_ok && right_ok) {
+                            offset_in_line = abs_pos + needle.len();
+                            continue;
+                        }
+                    }
+                    // Create a small snippet around the match
+                    let start = abs_pos.saturating_sub(40);
+                    let end = (abs_pos + q.len()).saturating_add(40).min(original_line.len());
+                    let snippet = original_line[start..end].to_string();
+                    self.global_results.push(GlobalSearchResult {
+                        tab_index: tab_idx,
+                        path: tab.path.clone(),
+                        line_index: line_idx,
+                        snippet,
+                        match_index_in_tab: match_counter_in_tab,
+                    });
+                    match_counter_in_tab += 1;
+                    offset_in_line = abs_pos + needle.len();
+                    if offset_in_line >= hay.len() { break; }
+                }
+            }
+        }
+    }
+
     // settings helpers moved to crate::settings
 }
 
@@ -228,10 +383,21 @@ impl Default for FileViewerApp {
             text_is_big: false,
             text_line_count: 0,
             text_is_lossy: false,
+            open_text_tabs: Vec::new(),
+            active_text_tab: None,
             search_query: String::new(),
             search_active: false,
             search_count: 0,
             search_current: 0,
+            scroll_target_line: None,
+            show_recent_window: false,
+            show_global_search_window: false,
+            global_query: String::new(),
+            global_case_sensitive: false,
+            global_whole_word: false,
+            global_results: Vec::new(),
+            file_open_rx: None,
+            file_open_in_flight: false,
         }
     }
 }
@@ -254,14 +420,7 @@ impl eframe::App for FileViewerApp {
         let mut toggle_dark = false;
         ctx.input(|i| {
             if i.modifiers.command && i.key_pressed(egui::Key::O) {
-                if let Some(path) = FileDialog::new()
-                    .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
-                    .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
-                    .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
-                    .pick_file()
-                {
-                    file_to_load = Some(path);
-                }
+                self.start_open_file_dialog();
             }
             if i.modifiers.command && i.key_pressed(egui::Key::D) {
                 toggle_dark = true;
@@ -369,6 +528,26 @@ impl eframe::App for FileViewerApp {
             }
         });
 
+        // Poll background file open dialog
+        if self.file_open_in_flight {
+            if let Some(rx) = &self.file_open_rx {
+                match rx.try_recv() {
+                    Ok(opt) => {
+                        self.file_open_in_flight = false;
+                        self.file_open_rx = None;
+                        if let Some(p) = opt { file_to_load = Some(p); }
+                    }
+                    Err(TryRecvError::Empty) => {}
+                    Err(TryRecvError::Disconnected) => {
+                        self.file_open_in_flight = false;
+                        self.file_open_rx = None;
+                    }
+                }
+            } else {
+                self.file_open_in_flight = false;
+            }
+        }
+
         // Modern About dialog
         if self.show_about {
             egui::Window::new("About Gemini File Viewer")
@@ -444,6 +623,10 @@ impl eframe::App for FileViewerApp {
             });
         }
 
+        // Auxiliary windows
+        crate::ui::recent_files_window(ctx, self, &mut file_to_load);
+        crate::ui::global_search_window(ctx, self);
+
         // Status Bar
         egui::TopBottomPanel::bottom("statusbar").show(ctx, |ui| {
             crate::ui::status_bar(ui, self);
@@ -486,7 +669,7 @@ impl eframe::App for FileViewerApp {
                                         .unwrap_or("")
                                         .to_lowercase();
                                     // Determine target line for current match
-                                    let target_line = if !self.search_query.is_empty() && self.search_count > 0 {
+                                    let target_line_from_search = if !self.search_query.is_empty() && self.search_count > 0 {
                                         search::find_target_line(text, &self.search_query, self.search_current)
                                     } else { None };
                                     // Render per line and capture rect
@@ -499,9 +682,10 @@ impl eframe::App for FileViewerApp {
                                         }
                                         highlight::append_highlighted(&mut line_job, line, &ext, &self.search_query, font_id.clone(), text_color, do_highlight, &mut bracket_depth, self.search_current, &mut counter, &mut in_block_comment, self.code_theme);
                                         let resp = ui.label(line_job);
-                                        if target_line == Some(i) { target_rect = Some(resp.rect); }
+                                        if target_line_from_search == Some(i) || self.scroll_target_line == Some(i) { target_rect = Some(resp.rect); }
                                     }
                                     if let Some(rect) = target_rect { ui.scroll_to_rect(rect, Some(egui::Align::Center)); }
+                                    self.scroll_target_line = None;
                                 } else {
                                     ui.label(RichText::new(text).monospace().size(font_id.size));
                                 }
@@ -557,14 +741,7 @@ impl eframe::App for FileViewerApp {
                         let mut open_button = egui::Button::new(RichText::new("📂 Open File").strong());
                         open_button = open_button.fill(egui::Color32::from_rgb(34, 197, 94)); // Green
                         if ui.add(open_button).clicked() {
-                            if let Some(path) = FileDialog::new()
-                                .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
-                                .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
-                                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
-                                .pick_file()
-                            {
-                                file_to_load = Some(path);
-                            }
+                            self.start_open_file_dialog();
                         }
                     });
                     
