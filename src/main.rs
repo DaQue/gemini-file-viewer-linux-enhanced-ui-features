@@ -7,6 +7,8 @@ mod io;
 mod settings;
 mod themes;
 mod ui;
+mod input;
+mod central;
 
 use app::FileViewerApp;
 use eframe::egui;
