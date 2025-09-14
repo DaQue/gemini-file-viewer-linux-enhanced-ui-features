@@ -28,8 +28,8 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
             app.start_open_file_dialog();
         }
 
-        // Recent Files window toggle
-        let mut recent_button = egui::Button::new(RichText::new("📋 Recent Files").strong());
+        // Recent Files window toggle (short label to keep near Open)
+        let mut recent_button = egui::Button::new(RichText::new("📋 Recent").strong());
         recent_button = recent_button.fill(egui::Color32::from_rgb(59, 130, 246)); // Blue
         if ui.add(recent_button).clicked() {
             app.show_recent_window = !app.show_recent_window;

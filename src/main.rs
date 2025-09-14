@@ -18,6 +18,7 @@ fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1000.0, 700.0])
+            .with_min_inner_size([900.0, 560.0])
             .with_resizable(true)
             .with_title("Gemini File Viewer 2.0"),
         ..Default::default()
