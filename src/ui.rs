@@ -35,13 +35,6 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
             app.show_recent_window = !app.show_recent_window;
         }
 
-        // Global Search window toggle
-        let mut global_button = egui::Button::new(RichText::new("🔎 Global Search").strong());
-        global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
-        if ui.add(global_button).clicked() {
-            app.show_global_search_window = !app.show_global_search_window;
-        }
-
         // Themes button
         ui.menu_button(RichText::new("🎨 Themes").strong(), |ui| {
             ui.set_min_width(300.0);
@@ -106,6 +99,13 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
             app.content = None;
             app.current_path = None;
             app.error_message = None;
+        }
+
+        // Global Search window toggle (moved to end to keep Open+Recent adjacent)
+        let mut global_button = egui::Button::new(RichText::new("🔎 Global Search").strong());
+        global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
+        if ui.add(global_button).clicked() {
+            app.show_global_search_window = !app.show_global_search_window;
         }
     });
 
