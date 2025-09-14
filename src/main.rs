@@ -9,6 +9,7 @@ mod themes;
 mod ui;
 mod input;
 mod central;
+mod style;
 
 use app::FileViewerApp;
 use eframe::egui;
