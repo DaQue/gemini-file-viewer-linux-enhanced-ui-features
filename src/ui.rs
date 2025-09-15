@@ -327,6 +327,69 @@ pub(crate) fn status_extra(ui: &mut egui::Ui, app: &mut crate::app::FileViewerAp
     });
 }
 
+pub(crate) fn tab_strip(ctx: &egui::Context, app: &mut crate::app::FileViewerApp) {
+    if app.open_text_tabs.is_empty() {
+        return;
+    }
+    egui::TopBottomPanel::top("tabstrip").show(ctx, |ui| {
+        egui::ScrollArea::horizontal().auto_shrink([false, true]).show(ui, |ui| {
+            let mut to_switch: Option<usize> = None;
+            let mut to_close: Option<usize> = None;
+            ui.horizontal(|ui| {
+                for (idx, tab) in app.open_text_tabs.iter().enumerate() {
+                    let is_active = app.active_text_tab == Some(idx);
+                    let file_name = tab
+                        .path
+                        .file_name()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("(untitled)");
+                    let mut frame = egui::Frame::group(ui.style());
+                    if is_active {
+                        frame = frame.fill(egui::Color32::from_rgb(30, 41, 59));
+                    }
+                    frame.show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.selectable_label(is_active, egui::RichText::new(file_name).monospace()).clicked() {
+                                to_switch = Some(idx);
+                            }
+                            if ui.small_button("✕").on_hover_text("Close tab").clicked() {
+                                to_close = Some(idx);
+                            }
+                        });
+                    });
+                }
+            });
+            if let Some(idx) = to_switch {
+                app.switch_to_text_tab(idx);
+            }
+            if let Some(idx) = to_close {
+                // Remove the tab and update active/content
+                let was_active = app.active_text_tab == Some(idx);
+                if idx < app.open_text_tabs.len() {
+                    app.open_text_tabs.remove(idx);
+                }
+                if app.open_text_tabs.is_empty() {
+                    app.active_text_tab = None;
+                    // If we were showing text from that tab, clear content
+                    if matches!(app.content, Some(crate::app::Content::Text(_))) {
+                        app.content = None;
+                        app.current_path = None;
+                    }
+                } else {
+                    // Adjust active index
+                    if was_active {
+                        let new_idx = if idx >= app.open_text_tabs.len() { app.open_text_tabs.len() - 1 } else { idx };
+                        app.switch_to_text_tab(new_idx);
+                    } else if let Some(a) = app.active_text_tab {
+                        // Shift left if needed
+                        if a > idx { app.active_text_tab = Some(a - 1); }
+                    }
+                }
+            }
+        });
+    });
+}
+
 pub(crate) fn recent_files_window(ctx: &egui::Context, app: &mut crate::app::FileViewerApp, file_to_load: &mut Option<PathBuf>) {
     if !app.show_recent_window { return; }
     let mut open_flag = app.show_recent_window;

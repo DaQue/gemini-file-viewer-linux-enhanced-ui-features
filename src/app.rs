@@ -465,6 +465,9 @@ impl eframe::App for FileViewerApp {
             });
         });
 
+        // Tab strip for open text tabs
+        crate::ui::tab_strip(ctx, self);
+
         // Search Bar (for text files and images with navigation)
         if matches!(self.content, Some(Content::Text(_))) || matches!(self.content, Some(Content::Image(_))) {
             egui::TopBottomPanel::top("searchbar").show(ctx, |ui| {

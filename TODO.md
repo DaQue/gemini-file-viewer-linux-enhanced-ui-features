@@ -1,18 +1,18 @@
 # TODO
 
-- [ ] Integrate syntect-based syntax highlighting
+- [x] Integrate syntect-based syntax highlighting
   - Wire `syntect` for tokenization/coloring; keep current lightweight highlighter as fallback for very large files
   - Load syntaxes/themes (dump-load) at startup; map to existing `CodeTheme`
   - Gate by file size and extension; add a setting to toggle syntect on/off
   - Remove bespoke highlighter paths once parity is verified
-  - Status: scaffolding and toggle in place; rendering still plain
+  - Status: syntect session integrated; uses defaults; toggle in Settings
 
-- [ ] Multi-tab UI for text and images
+- [x] Multi-tab UI for text and images
   - Render a tab strip; show file name and dirty state (future)
   - Open subsequent files in new tabs; click to switch; middle-click/shortcut to close
   - Persist and restore open tabs and active tab via settings
   - Keyboard shortcuts: Next/Prev Tab, Close Tab, Reopen Closed Tab
-  - Status: internal vectors exist for text tabs, but no visible tab strip yet
+  - Status: tab strip added with close buttons; persistence TBD
 
 - [ ] Clippy: remove remaining allows and refactor highlight module
   - Introduce a `HighlightContext` struct to reduce argument counts
@@ -35,12 +35,12 @@
   - Compact Recent list items with icons; keyboard navigation
   - Show file type icon and size in status bar for text files
 
-- [ ] Window sizing and persistence
+- [x] Window sizing and persistence
   - Enforce a minimum width to fit all toolbar buttons
   - Restore last window size on startup; don't go below minimum
-  - Status: min size enforced; last size fields stored; applying on startup
+  - Status: min size enforced; last size fields stored; applied on startup
 
-- [ ] About dialog content
+- [x] About dialog content
   - Include license: free to use with no warranty of usability or responsibility
   - List authors: David Queen, Allison Bayless
   - Status: text added in Settings → About
