@@ -3,7 +3,7 @@ use eframe::egui;
 use egui::RichText;
 use crate::themes::CodeTheme;
 
-pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ctx: &egui::Context, _file_to_load: &mut Option<PathBuf>) {
+pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _ctx: &egui::Context, file_to_load: &mut Option<PathBuf>) {
 
     // Modern app branding
     ui.horizontal(|ui| {
@@ -25,7 +25,14 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
         let mut open_button = egui::Button::new(RichText::new("📂 Open File").strong());
         open_button = open_button.fill(egui::Color32::from_rgb(34, 197, 94)); // Green
         if ui.add(open_button).clicked() {
-            app.start_open_file_dialog();
+            // Use blocking dialog here for reliability
+            if let Some(path) = rfd::FileDialog::new()
+                .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
+                .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
+                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
+                .pick_file() {
+                *file_to_load = Some(path);
+            }
         }
 
         // Recent Files window toggle (short label to keep near Open)
@@ -69,40 +76,13 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
             }
         });
 
-        // Settings button
-        ui.menu_button(RichText::new("⚙️ Settings").strong(), |ui| {
-            ui.set_min_width(200.0);
-            
-            let prev_dark = app.dark_mode;
-            let prev_lines = app.show_line_numbers;
-            let prev_syntect = app.use_syntect;
-            
-            ui.label(RichText::new("🎨 Display Settings").strong());
-            ui.add_space(8.0);
-            
-            ui.checkbox(&mut app.dark_mode, RichText::new("🌙 Dark Mode").strong());
-            ui.checkbox(&mut app.show_line_numbers, RichText::new("📊 Line Numbers").strong());
-            ui.checkbox(&mut app.use_syntect, RichText::new("🎨 Syntect Highlighting (beta)").strong());
-            
-            if app.dark_mode != prev_dark {
-                app.apply_theme(ctx);
-            }
-            if app.dark_mode != prev_dark || app.show_line_numbers != prev_lines || app.use_syntect != prev_syntect {
-                crate::settings::save_settings_to_disk(app);
-            }
-            
-            ui.add_space(12.0);
-            ui.separator();
-            ui.add_space(8.0);
-            
-            ui.label(RichText::new("ℹ️ About").strong());
-            ui.add_space(8.0);
-            ui.label(RichText::new("Gemini File Viewer").weak());
-            ui.label(RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
-            ui.add_space(4.0);
-            ui.label(RichText::new("License: Free to use with no warranty of usability or responsibility.").small());
-            ui.label(RichText::new("Authors: David Queen, Allison Bayless").small());
-        });
+        // Settings window toggle (more reliable than a dropdown on some platforms)
+        if ui.add(egui::Button::new(RichText::new("⚙️ Settings").strong()).fill(egui::Color32::from_rgb(107, 114, 128))).clicked() {
+            app.show_settings_window = true;
+        }
+        if ui.add(egui::Button::new(RichText::new("ℹ️ About").strong()).fill(egui::Color32::from_rgb(107, 114, 128))).clicked() {
+            app.show_about = true;
+        }
 
         // Clear button
         let mut clear_button = egui::Button::new(RichText::new("🗑️ Clear").strong());

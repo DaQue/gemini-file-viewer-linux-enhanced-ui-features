@@ -13,6 +13,12 @@ pub(crate) fn handle_input(app: &mut crate::app::FileViewerApp, ctx: &egui::Cont
         if i.modifiers.command && i.key_pressed(egui::Key::F) {
             app.search_active = true;
         }
+        if i.modifiers.command && i.key_pressed(egui::Key::Comma) {
+            app.show_settings_window = true;
+        }
+        if i.key_pressed(egui::Key::F1) {
+            app.show_about = true;
+        }
         if i.modifiers.command && i.key_pressed(egui::Key::L) {
             app.show_line_numbers = !app.show_line_numbers;
             crate::settings::save_settings_to_disk(app);

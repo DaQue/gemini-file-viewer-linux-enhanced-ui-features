@@ -56,6 +56,10 @@ pub struct FileViewerApp {
     pub(crate) image_zoom: f32,
     #[serde(skip)]
     pub(crate) show_about: bool,
+    #[serde(skip)]
+    pub(crate) show_settings_window: bool,
+    #[serde(skip)]
+    pub(crate) show_keybindings: bool,
     pub(crate) image_fit: bool,
     // Derived/runtime-only state for text rendering
     #[serde(skip)]
@@ -326,6 +330,8 @@ impl Default for FileViewerApp {
             text_zoom: 1.0,
             image_zoom: 1.0,
             show_about: false,
+            show_settings_window: false,
+            show_keybindings: false,
             image_fit: false,
             text_is_big: false,
             text_line_count: 0,
@@ -452,10 +458,86 @@ impl eframe::App for FileViewerApp {
                     });
                 });
         }
+        if self.show_settings_window {
+            let mut dark = self.dark_mode;
+            let mut lines = self.show_line_numbers;
+            let mut syn = self.use_syntect;
+            let mut open = self.show_settings_window;
+            egui::Window::new("Settings")
+                .collapsible(false)
+                .resizable(true)
+                .min_width(520.0)
+                .open(&mut open)
+                .show(ctx, |ui| {
+                    ui.label(RichText::new("🎨 Display Settings").strong());
+                    ui.add_space(8.0);
+                    ui.checkbox(&mut dark, RichText::new("🌙 Dark Mode").strong());
+                    ui.checkbox(&mut lines, RichText::new("📊 Line Numbers").strong());
+                    ui.checkbox(&mut syn, RichText::new("🎨 Syntect Highlighting (beta)").strong());
+                    ui.add_space(12.0);
+                    ui.separator();
+                    ui.add_space(8.0);
+                    ui.label(RichText::new("ℹ️ About").strong());
+                    ui.add_space(8.0);
+                    ui.label(RichText::new("Gemini File Viewer").weak());
+                    ui.label(RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
+                    ui.add_space(4.0);
+                    ui.label(RichText::new("License: Free to use with no warranty of usability or responsibility.").small());
+                    ui.label(RichText::new("Authors: David Queen, Allison Bayless").small());
+                    ui.add_space(12.0);
+                    ui.separator();
+                    ui.add_space(8.0);
+                    if ui.button(RichText::new("⌨️ Show Keybindings").strong()).clicked() {
+                        self.show_keybindings = true;
+                    }
+                });
+            // Apply after window closure to avoid borrow conflict
+            if self.dark_mode != dark { self.dark_mode = dark; self.apply_theme(ctx); }
+            if self.show_line_numbers != lines || self.use_syntect != syn || self.dark_mode != dark {
+                self.show_line_numbers = lines;
+                self.use_syntect = syn;
+                crate::settings::save_settings_to_disk(self);
+            }
+            self.show_settings_window = open;
+        }
         if toggle_dark {
             self.dark_mode = !self.dark_mode;
             self.apply_theme(ctx);
             crate::settings::save_settings_to_disk(self);
+        }
+
+        if self.show_keybindings {
+            egui::Window::new("Keybindings")
+                .collapsible(false)
+                .resizable(true)
+                .min_width(520.0)
+                .open(&mut self.show_keybindings)
+                .show(ctx, |ui| {
+                    ui.vertical(|ui| {
+                        ui.label(RichText::new("General").strong());
+                        ui.monospace("Ctrl+O    — Open file (blocking)");
+                        ui.monospace("Ctrl+D    — Toggle dark mode");
+                        ui.monospace("Ctrl+L    — Toggle line numbers");
+                        ui.monospace("Ctrl+W    — Toggle word wrap");
+                        ui.monospace("Ctrl+,    — Open Settings");
+                        ui.monospace("F1        — Open About");
+                        ui.add_space(8.0);
+                        ui.label(RichText::new("Find/Search").strong());
+                        ui.monospace("Ctrl+F    — Focus Find");
+                        ui.monospace("Enter     — Next match");
+                        ui.monospace("Shift+Enter — Previous match");
+                        ui.add_space(8.0);
+                        ui.label(RichText::new("Navigation").strong());
+                        ui.monospace("Left/Right — Previous/Next file in folder");
+                        ui.monospace("< or >    — Previous/Next file in folder");
+                        ui.add_space(8.0);
+                        ui.label(RichText::new("Zoom").strong());
+                        ui.monospace("Ctrl+=     — Zoom in (text/image)");
+                        ui.monospace("Ctrl+-     — Zoom out (text/image)");
+                        ui.monospace("Ctrl+0     — Reset zoom");
+                        ui.monospace("Ctrl+Wheel — Zoom while hovering content");
+                    });
+                });
         }
 
         // Top Toolbar

@@ -45,6 +45,10 @@
   - List authors: David Queen, Allison Bayless
   - Status: text added in Settings → About
 
+- [x] Keybindings window
+  - Add button inside Settings to show keybindings; ensure minimum width but resizable
+  - Add keyboard shortcuts: Ctrl+, for Settings; F1 for About
+
 - [ ] Performance
   - Background loading for very large text files; incremental rendering
   - Cache line layouts for faster scrolling on huge files
