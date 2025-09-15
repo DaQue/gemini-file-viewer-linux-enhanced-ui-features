@@ -34,13 +34,16 @@ pub(crate) fn render_central_panel(ui: &mut egui::Ui, app: &mut crate::app::File
                             } else { None };
                             let mut counter: usize = 0;
                             let mut target_rect: Option<egui::Rect> = None;
+                            let mut syntect_session = if app.use_syntect && do_highlight {
+                                Some(crate::highlight_syntect::SyntectSession::start(&ext, true))
+                            } else { None };
                             for (i, line) in text.lines().enumerate() {
                                 let mut line_job = LayoutJob::default();
                                 if do_line_numbers {
                                     line_job.append(&format!("{:>4} ", i + 1), 0.0, egui::TextFormat { font_id: font_id.clone(), color: app.code_theme.comment(), ..Default::default() });
                                 }
-                                if app.use_syntect && do_highlight {
-                                    crate::highlight_syntect::SyntectHighlighter::new().append_line(&mut line_job, line, &ext, font_id.clone(), text_color);
+                                if let Some(session) = syntect_session.as_mut() {
+                                    session.append_line(&mut line_job, line, font_id.clone());
                                 } else {
                                     crate::highlight::append_highlighted(&mut line_job, line, &ext, &app.search_query, font_id.clone(), text_color, do_highlight, &mut bracket_depth, app.search_current, &mut counter, &mut in_block_comment, app.code_theme);
                                 }

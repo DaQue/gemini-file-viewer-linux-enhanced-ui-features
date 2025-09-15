@@ -394,10 +394,9 @@ pub(crate) fn global_search_window(ctx: &egui::Context, app: &mut crate::app::Fi
                             app.switch_to_text_tab(res.tab_index);
                             // Set local search state and jump
                             app.search_query = app.global_query.clone();
-                            if let Some(active) = app.active_text_tab {
-                                if let Some(tab) = app.open_text_tabs.get(active) {
-                                    app.search_count = crate::search::recompute_count(&app.search_query, &tab.text);
-                                }
+                            if let Some(active) = app.active_text_tab
+                                && let Some(tab) = app.open_text_tabs.get(active) {
+                                app.search_count = crate::search::recompute_count(&app.search_query, &tab.text);
                             }
                             app.search_current = res.match_index_in_tab.min(app.search_count.saturating_sub(1));
                             app.scroll_target_line = Some(res.line_index);
