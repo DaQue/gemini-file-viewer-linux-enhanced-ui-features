@@ -49,6 +49,7 @@ pub struct FileViewerApp {
     pub(crate) show_line_numbers: bool,
     pub(crate) word_wrap: bool,
     pub(crate) use_syntect: bool,
+    pub(crate) drag_and_drop_enabled: bool,
     // Persisted window size (logical points)
     pub(crate) last_window_width: f32,
     pub(crate) last_window_height: f32,
@@ -325,6 +326,7 @@ impl Default for FileViewerApp {
             show_line_numbers: true,
             word_wrap: true,
             use_syntect: true,
+            drag_and_drop_enabled: true,
             last_window_width: 1000.0,
             last_window_height: 700.0,
             text_zoom: 1.0,
@@ -382,6 +384,42 @@ impl eframe::App for FileViewerApp {
 
         // Keyboard + mouse input (delegated)
         let toggle_dark = crate::input::handle_input(self, ctx, &mut file_to_load);
+
+        // Drag-and-drop files to open
+        if self.drag_and_drop_enabled {
+            let dropped = ctx.input(|i| i.raw.dropped_files.clone());
+            if !dropped.is_empty() {
+                // Limit to avoid accidental floods
+                let mut opened_first: bool = file_to_load.is_some();
+                let mut extra_text_tabs: usize = 0;
+                for f in dropped.into_iter().take(20) {
+                    if let Some(path) = f.path {
+                        if crate::io::is_supported_image(&path) || crate::io::is_supported_text(&path) {
+                            if !opened_first {
+                                file_to_load = Some(path);
+                                opened_first = true;
+                            } else if crate::io::is_supported_text(&path)
+                                && let Ok((text, lossy, lines)) = crate::io::load_text(&path) {
+                                // Add as background tab without switching
+                                let mut exists = false;
+                                for t in &self.open_text_tabs { if t.path == path { exists = true; break; } }
+                                if !exists {
+                                    self.open_text_tabs.push(TextTab { path: path.clone(), text, is_lossy: lossy, line_count: lines });
+                                    extra_text_tabs += 1;
+                                }
+                            }
+                        } else {
+                            self.error_message = Some("Unsupported file type".to_string());
+                        }
+                    }
+                }
+                if extra_text_tabs > 0 && self.active_text_tab.is_none() {
+                    // If no active tab yet, activate the last added
+                    let last = self.open_text_tabs.len().saturating_sub(1);
+                    if self.open_text_tabs.get(last).is_some() { self.active_text_tab = Some(last); }
+                }
+            }
+        }
 
         // Poll background file open dialog
         if self.file_open_in_flight {
