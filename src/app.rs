@@ -473,7 +473,7 @@ impl eframe::App for FileViewerApp {
                     ui.add_space(8.0);
                     ui.checkbox(&mut dark, RichText::new("🌙 Dark Mode").strong());
                     ui.checkbox(&mut lines, RichText::new("📊 Line Numbers").strong());
-                    ui.checkbox(&mut syn, RichText::new("🎨 Syntect Highlighting (beta)").strong());
+                    ui.checkbox(&mut syn, RichText::new("🎨 Syntect Highlighting").strong());
                     ui.add_space(12.0);
                     ui.separator();
                     ui.add_space(8.0);
@@ -515,27 +515,27 @@ impl eframe::App for FileViewerApp {
                 .show(ctx, |ui| {
                     ui.vertical(|ui| {
                         ui.label(RichText::new("General").strong());
-                        ui.monospace("Ctrl+O    — Open file (blocking)");
-                        ui.monospace("Ctrl+D    — Toggle dark mode");
-                        ui.monospace("Ctrl+L    — Toggle line numbers");
-                        ui.monospace("Ctrl+W    — Toggle word wrap");
-                        ui.monospace("Ctrl+,    — Open Settings");
+                        ui.monospace("Ctrl/Alt+O — Open file");
+                        ui.monospace("Ctrl/Alt+D — Toggle dark mode");
+                        ui.monospace("Ctrl/Alt+L — Toggle line numbers");
+                        ui.monospace("Ctrl/Alt+W — Toggle word wrap");
+                        ui.monospace("Ctrl/Alt+, — Open Settings");
                         ui.monospace("F1        — Open About");
                         ui.add_space(8.0);
                         ui.label(RichText::new("Find/Search").strong());
-                        ui.monospace("Ctrl+F    — Focus Find");
+                        ui.monospace("Ctrl/Alt+F — Focus Find");
                         ui.monospace("Enter     — Next match");
                         ui.monospace("Shift+Enter — Previous match");
                         ui.add_space(8.0);
                         ui.label(RichText::new("Navigation").strong());
-                        ui.monospace("Left/Right — Previous/Next file in folder");
+                        ui.monospace("Left/Right or Alt+Left/Right — Prev/Next file in folder");
                         ui.monospace("< or >    — Previous/Next file in folder");
                         ui.add_space(8.0);
                         ui.label(RichText::new("Zoom").strong());
-                        ui.monospace("Ctrl+=     — Zoom in (text/image)");
-                        ui.monospace("Ctrl+-     — Zoom out (text/image)");
-                        ui.monospace("Ctrl+0     — Reset zoom");
-                        ui.monospace("Ctrl+Wheel — Zoom while hovering content");
+                        ui.monospace("Ctrl/Alt+=  — Zoom in (text/image)");
+                        ui.monospace("Ctrl/Alt+-  — Zoom out (text/image)");
+                        ui.monospace("Ctrl/Alt+0  — Reset zoom");
+                        ui.monospace("Ctrl/Alt+Wheel — Zoom while hovering content");
                     });
                 });
         }

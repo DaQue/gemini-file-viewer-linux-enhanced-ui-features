@@ -5,7 +5,7 @@
   - Load syntaxes/themes (dump-load) at startup; map to existing `CodeTheme`
   - Gate by file size and extension; add a setting to toggle syntect on/off
   - Remove bespoke highlighter paths once parity is verified
-  - Status: syntect session integrated; uses defaults; toggle in Settings
+  - Status: syntect session integrated; uses defaults; toggle in Settings; remove “beta” label
 
 - [x] Multi-tab UI for text and images
   - Render a tab strip; show file name and dirty state (future)
@@ -48,6 +48,7 @@
 - [x] Keybindings window
   - Add button inside Settings to show keybindings; ensure minimum width but resizable
   - Add keyboard shortcuts: Ctrl+, for Settings; F1 for About
+  - Status: expanded to include Alt variants
 
 - [ ] Performance
   - Background loading for very large text files; incremental rendering
