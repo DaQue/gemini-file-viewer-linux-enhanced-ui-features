@@ -24,7 +24,8 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
         // Open File button
         let mut open_button = egui::Button::new(RichText::new("📂 Open File").strong());
         open_button = open_button.fill(egui::Color32::from_rgb(34, 197, 94)); // Green
-        if ui.add(open_button).clicked() {
+        let open_clicked = ui.add_enabled(!app.file_open_in_flight, open_button).clicked();
+        if open_clicked {
             // Use blocking dialog here for reliability
             if let Some(path) = rfd::FileDialog::new()
                 .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
@@ -34,11 +35,16 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
                 *file_to_load = Some(path);
             }
         }
+        if app.file_open_in_flight {
+            ui.add_space(8.0);
+            ui.add(egui::Spinner::new().size(14.0));
+            ui.label(RichText::new("Opening file…").weak());
+        }
 
         // Recent Files window toggle (short label to keep near Open)
         let mut recent_button = egui::Button::new(RichText::new("📋 Recent").strong());
         recent_button = recent_button.fill(egui::Color32::from_rgb(59, 130, 246)); // Blue
-        if ui.add(recent_button).clicked() {
+        if ui.add_enabled(!app.file_open_in_flight, recent_button).clicked() {
             app.show_recent_window = !app.show_recent_window;
         }
 

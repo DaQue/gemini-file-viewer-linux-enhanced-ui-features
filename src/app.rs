@@ -482,7 +482,7 @@ impl eframe::App for FileViewerApp {
                     ui.label(RichText::new("Gemini File Viewer").weak());
                     ui.label(RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
                     ui.add_space(4.0);
-                    ui.label(RichText::new("License: Free to use with no warranty of usability or responsibility.").small());
+                    ui.label(RichText::new("Disclaimer: This software is provided “as is” without warranty of any kind, whether express, implied, or statutory, including but not limited to warranties of merchantability, fitness for a particular purpose, and noninfringement. To the maximum extent permitted by law, the authors shall not be liable for any claim, damages, or other liability, whether in contract, tort, or otherwise, arising from or in connection with the software or its use.").small());
                     ui.label(RichText::new("Authors: David Queen, Allison Bayless").small());
                     ui.add_space(12.0);
                     ui.separator();
