@@ -17,7 +17,7 @@ fn engine() -> &'static SyntectEngine {
     })
 }
 
-fn choose_theme<'a>(ts: &'a ThemeSet, dark_mode: bool) -> &'a Theme {
+fn choose_theme(ts: &ThemeSet, dark_mode: bool) -> &Theme {
     // Prefer popular defaults; fallback to first available
     let dark_name = "base16-ocean.dark";
     let light_name = "InspiredGitHub";

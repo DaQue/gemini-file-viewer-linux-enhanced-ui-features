@@ -45,7 +45,19 @@ pub(crate) fn render_central_panel(ui: &mut egui::Ui, app: &mut crate::app::File
                                 if let Some(session) = syntect_session.as_mut() {
                                     session.append_line(&mut line_job, line, font_id.clone());
                                 } else {
-                                    crate::highlight::append_highlighted(&mut line_job, line, &ext, &app.search_query, font_id.clone(), text_color, do_highlight, &mut bracket_depth, app.search_current, &mut counter, &mut in_block_comment, app.code_theme);
+                                    let mut hctx = crate::highlight::HighlightContext {
+                                        ext: &ext,
+                                        font_id: font_id.clone(),
+                                        base_color: text_color,
+                                        do_syntax: do_highlight,
+                                        depth: &mut bracket_depth,
+                                        current_idx: app.search_current,
+                                        counter: &mut counter,
+                                        query: &app.search_query,
+                                        in_block_comment: &mut in_block_comment,
+                                        theme: app.code_theme,
+                                    };
+                                    crate::highlight::append_highlighted(&mut line_job, line, &mut hctx);
                                 }
                                 let resp = ui.label(line_job);
                                 if target_line_from_search == Some(i) || app.scroll_target_line == Some(i) { target_rect = Some(resp.rect); }
