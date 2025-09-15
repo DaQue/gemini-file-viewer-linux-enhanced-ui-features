@@ -1,6 +1,7 @@
 use eframe::egui::{self, text::LayoutJob, Color32, FontId};
 use crate::themes::CodeTheme;
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn append_with_search(
     job: &mut LayoutJob,
     text: &str,
@@ -44,6 +45,7 @@ pub(crate) fn append_with_search(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn token_highlight(
     job: &mut LayoutJob,
     text: &str,
@@ -81,9 +83,8 @@ pub(crate) fn token_highlight(
         } else {
             if !buf.is_empty() {
                 let lc = buf.to_ascii_lowercase();
-                let (color, _) = if ext == "rs" && keywords_rs.contains(&buf.as_str()) {
-                    (kw_color, true)
-                } else if ext == "py" && keywords_py.contains(&buf.as_str()) {
+                let (color, _) = if (ext == "rs" && keywords_rs.contains(&buf.as_str()))
+                    || (ext == "py" && keywords_py.contains(&buf.as_str())) {
                     (kw_color, true)
                 } else if lc == "true" || lc == "false" || lc == "null" || lc == "none" {
                     (bool_color, true)
@@ -114,9 +115,8 @@ pub(crate) fn token_highlight(
     }
     if !buf.is_empty() {
         let lc = buf.to_ascii_lowercase();
-        let (color, _) = if ext == "rs" && keywords_rs.contains(&buf.as_str()) {
-            (kw_color, true)
-        } else if ext == "py" && keywords_py.contains(&buf.as_str()) {
+        let (color, _) = if (ext == "rs" && keywords_rs.contains(&buf.as_str()))
+            || (ext == "py" && keywords_py.contains(&buf.as_str())) {
             (kw_color, true)
         } else if lc == "true" || lc == "false" || lc == "null" || lc == "none" {
             (bool_color, true)
@@ -129,6 +129,7 @@ pub(crate) fn token_highlight(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn append_highlighted(
     job: &mut LayoutJob,
     line: &str,
@@ -228,13 +229,11 @@ pub(crate) fn append_highlighted(
         }
         let comment_prefix = if ext == "rs" || ext == "js" { "//" } else if ext == "toml" { "#" } else { "" };
         let comment_prefix = if ext == "py" { "#" } else { comment_prefix };
-        if !comment_prefix.is_empty() {
-            if let Some(pos) = line.find(comment_prefix) {
-                append_highlighted(job, &line[..pos], "", query, font_id.clone(), base_color, do_syntax, depth, current_idx, counter, in_block_comment, theme);
-                let fmt = egui::TextFormat { font_id: font_id.clone(), color: theme.comment(), ..Default::default() };
-                job.append(&line[pos..], 0.0, fmt);
-                return;
-            }
+        if !comment_prefix.is_empty() && let Some(pos) = line.find(comment_prefix) {
+            append_highlighted(job, &line[..pos], "", query, font_id.clone(), base_color, do_syntax, depth, current_idx, counter, in_block_comment, theme);
+            let fmt = egui::TextFormat { font_id: font_id.clone(), color: theme.comment(), ..Default::default() };
+            job.append(&line[pos..], 0.0, fmt);
+            return;
         }
     }
 
@@ -247,7 +246,7 @@ pub(crate) fn append_highlighted(
                 if !buf.is_empty() { token_highlight(job, &buf, ext, font_id.clone(), base_color, query, do_syntax, depth, current_idx, counter, theme); buf.clear(); }
                 buf.clear();
                 let mut s = String::from('"');
-                while let Some(c2) = chars.next() {
+                for c2 in chars.by_ref() {
                     s.push(c2);
                     if c2 == '"' { break; }
                 }

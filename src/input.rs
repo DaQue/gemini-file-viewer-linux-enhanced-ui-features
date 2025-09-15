@@ -63,9 +63,9 @@ pub(crate) fn handle_input(app: &mut crate::app::FileViewerApp, ctx: &egui::Cont
         }
 
         // Navigation with arrow keys for current content type
-        if i.key_pressed(egui::Key::ArrowRight) {
-            if let Some(cur) = app.current_path.clone() {
-                match app.content {
+        if i.key_pressed(egui::Key::ArrowRight)
+            && let Some(cur) = app.current_path.clone() {
+            match app.content {
                     Some(crate::app::Content::Image(_)) => {
                         if let Some(next) = crate::io::neighbor_image(&cur, true) { *file_to_load = Some(next); }
                     }
@@ -73,12 +73,11 @@ pub(crate) fn handle_input(app: &mut crate::app::FileViewerApp, ctx: &egui::Cont
                         if let Some(next) = crate::io::neighbor_text(&cur, true) { *file_to_load = Some(next); }
                     }
                     _ => {}
-                }
             }
         }
-        if i.key_pressed(egui::Key::ArrowLeft) {
-            if let Some(cur) = app.current_path.clone() {
-                match app.content {
+        if i.key_pressed(egui::Key::ArrowLeft)
+            && let Some(cur) = app.current_path.clone() {
+            match app.content {
                     Some(crate::app::Content::Image(_)) => {
                         if let Some(prev) = crate::io::neighbor_image(&cur, false) { *file_to_load = Some(prev); }
                     }
@@ -86,7 +85,6 @@ pub(crate) fn handle_input(app: &mut crate::app::FileViewerApp, ctx: &egui::Cont
                         if let Some(prev) = crate::io::neighbor_text(&cur, false) { *file_to_load = Some(prev); }
                     }
                     _ => {}
-                }
             }
         }
         // Support '<' and '>' typed keys for both images and text
@@ -100,13 +98,12 @@ pub(crate) fn handle_input(app: &mut crate::app::FileViewerApp, ctx: &egui::Cont
                             _ => {}
                         }
                     }
-                } else if t == "<" {
-                    if let Some(cur) = app.current_path.clone() {
-                        match app.content {
+                } else if t == "<"
+                    && let Some(cur) = app.current_path.clone() {
+                    match app.content {
                             Some(crate::app::Content::Image(_)) => { if let Some(prev) = crate::io::neighbor_image(&cur, false) { *file_to_load = Some(prev); } }
                             Some(crate::app::Content::Text(_)) => { if let Some(prev) = crate::io::neighbor_text(&cur, false) { *file_to_load = Some(prev); } }
                             _ => {}
-                        }
                     }
                 }
             }

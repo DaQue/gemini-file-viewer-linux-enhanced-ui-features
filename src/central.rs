@@ -39,7 +39,11 @@ pub(crate) fn render_central_panel(ui: &mut egui::Ui, app: &mut crate::app::File
                                 if do_line_numbers {
                                     line_job.append(&format!("{:>4} ", i + 1), 0.0, egui::TextFormat { font_id: font_id.clone(), color: app.code_theme.comment(), ..Default::default() });
                                 }
-                                crate::highlight::append_highlighted(&mut line_job, line, &ext, &app.search_query, font_id.clone(), text_color, do_highlight, &mut bracket_depth, app.search_current, &mut counter, &mut in_block_comment, app.code_theme);
+                                if app.use_syntect && do_highlight {
+                                    crate::highlight_syntect::SyntectHighlighter::new().append_line(&mut line_job, line, &ext, font_id.clone(), text_color);
+                                } else {
+                                    crate::highlight::append_highlighted(&mut line_job, line, &ext, &app.search_query, font_id.clone(), text_color, do_highlight, &mut bracket_depth, app.search_current, &mut counter, &mut in_block_comment, app.code_theme);
+                                }
                                 let resp = ui.label(line_job);
                                 if target_line_from_search == Some(i) || app.scroll_target_line == Some(i) { target_rect = Some(resp.rect); }
                             }

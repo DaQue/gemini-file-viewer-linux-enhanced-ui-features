@@ -1,8 +1,6 @@
 use eframe::egui;
-use crate::highlight;
-use crate::search;
 use crate::themes::CodeTheme;
-use egui::{text::LayoutJob, RichText, TextureHandle};
+use egui::{RichText, TextureHandle};
 use std::fs;
 use rfd::FileDialog;
 use std::path::PathBuf;
@@ -50,6 +48,7 @@ pub struct FileViewerApp {
     pub(crate) recent_files: Vec<PathBuf>,
     pub(crate) show_line_numbers: bool,
     pub(crate) word_wrap: bool,
+    pub(crate) use_syntect: bool,
     pub(crate) text_zoom: f32,
     pub(crate) image_zoom: f32,
     #[serde(skip)]
@@ -313,6 +312,7 @@ impl Default for FileViewerApp {
             recent_files: Vec::new(),
             show_line_numbers: true,
             word_wrap: true,
+            use_syntect: true,
             text_zoom: 1.0,
             image_zoom: 1.0,
             show_about: false,

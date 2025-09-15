@@ -3,7 +3,7 @@ use eframe::egui;
 use egui::RichText;
 use crate::themes::CodeTheme;
 
-pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ctx: &egui::Context, file_to_load: &mut Option<PathBuf>) {
+pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ctx: &egui::Context, _file_to_load: &mut Option<PathBuf>) {
 
     // Modern app branding
     ui.horizontal(|ui| {
@@ -33,6 +33,13 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
         recent_button = recent_button.fill(egui::Color32::from_rgb(59, 130, 246)); // Blue
         if ui.add(recent_button).clicked() {
             app.show_recent_window = !app.show_recent_window;
+        }
+
+        // Global Search window toggle (restored position)
+        let mut global_button = egui::Button::new(RichText::new("🔎 Global Search").strong());
+        global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
+        if ui.add(global_button).clicked() {
+            app.show_global_search_window = !app.show_global_search_window;
         }
 
         // Themes button
@@ -68,17 +75,19 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
             
             let prev_dark = app.dark_mode;
             let prev_lines = app.show_line_numbers;
+            let prev_syntect = app.use_syntect;
             
             ui.label(RichText::new("🎨 Display Settings").strong());
             ui.add_space(8.0);
             
             ui.checkbox(&mut app.dark_mode, RichText::new("🌙 Dark Mode").strong());
             ui.checkbox(&mut app.show_line_numbers, RichText::new("📊 Line Numbers").strong());
+            ui.checkbox(&mut app.use_syntect, RichText::new("🎨 Syntect Highlighting (beta)").strong());
             
             if app.dark_mode != prev_dark {
                 app.apply_theme(ctx);
             }
-            if app.dark_mode != prev_dark || app.show_line_numbers != prev_lines {
+            if app.dark_mode != prev_dark || app.show_line_numbers != prev_lines || app.use_syntect != prev_syntect {
                 crate::settings::save_settings_to_disk(app);
             }
             
@@ -101,12 +110,7 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
             app.error_message = None;
         }
 
-        // Global Search window toggle (moved to end to keep Open+Recent adjacent)
-        let mut global_button = egui::Button::new(RichText::new("🔎 Global Search").strong());
-        global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
-        if ui.add(global_button).clicked() {
-            app.show_global_search_window = !app.show_global_search_window;
-        }
+        // (global search was moved back to earlier position)
     });
 
     // Image controls (zoom and fit)
@@ -174,10 +178,10 @@ pub(crate) fn search_bar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp,
                 if resp.changed() || (prev.is_empty() && !app.search_query.is_empty()) {
                     app.search_count = 0;
                     app.search_current = 0;
-                    if let Some(crate::app::Content::Text(ref text)) = app.content {
-                        if !app.search_query.is_empty() && text.len() <= crate::app::HIGHLIGHT_CHAR_THRESHOLD {
-                            app.search_count = crate::search::recompute_count(&app.search_query, text);
-                        }
+                    if let Some(crate::app::Content::Text(ref text)) = app.content
+                        && !app.search_query.is_empty()
+                        && text.len() <= crate::app::HIGHLIGHT_CHAR_THRESHOLD {
+                        app.search_count = crate::search::recompute_count(&app.search_query, text);
                     }
                 }
             }
@@ -187,27 +191,23 @@ pub(crate) fn search_bar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp,
                 ui.add_space(12.0);
                 match app.content {
                     Some(crate::app::Content::Image(_)) => {
-                        if ui.small_button(RichText::new("⬅️").size(10.0)).on_hover_text("Previous file").clicked() {
-                            if let Some(prev) = crate::io::neighbor_image(&cur, false) {
-                                *file_to_load = Some(prev);
-                            }
+                        if ui.small_button(RichText::new("⬅️").size(10.0)).on_hover_text("Previous file").clicked()
+                            && let Some(prev) = crate::io::neighbor_image(&cur, false) {
+                            *file_to_load = Some(prev);
                         }
-                        if ui.small_button(RichText::new("➡️").size(10.0)).on_hover_text("Next file").clicked() {
-                            if let Some(next) = crate::io::neighbor_image(&cur, true) {
-                                *file_to_load = Some(next);
-                            }
+                        if ui.small_button(RichText::new("➡️").size(10.0)).on_hover_text("Next file").clicked()
+                            && let Some(next) = crate::io::neighbor_image(&cur, true) {
+                            *file_to_load = Some(next);
                         }
                     }
                     Some(crate::app::Content::Text(_)) => {
-                        if ui.small_button(RichText::new("⬅️").size(10.0)).on_hover_text("Previous file").clicked() {
-                            if let Some(prev) = crate::io::neighbor_text(&cur, false) {
-                                *file_to_load = Some(prev);
-                            }
+                        if ui.small_button(RichText::new("⬅️").size(10.0)).on_hover_text("Previous file").clicked()
+                            && let Some(prev) = crate::io::neighbor_text(&cur, false) {
+                            *file_to_load = Some(prev);
                         }
-                        if ui.small_button(RichText::new("➡️").size(10.0)).on_hover_text("Next file").clicked() {
-                            if let Some(next) = crate::io::neighbor_text(&cur, true) {
-                                *file_to_load = Some(next);
-                            }
+                        if ui.small_button(RichText::new("➡️").size(10.0)).on_hover_text("Next file").clicked()
+                            && let Some(next) = crate::io::neighbor_text(&cur, true) {
+                            *file_to_load = Some(next);
                         }
                     }
                     _ => {}
@@ -293,7 +293,7 @@ pub(crate) fn status_extra(ui: &mut egui::Ui, app: &mut crate::app::FileViewerAp
                         ui.colored_label(egui::Color32::from_rgb(245, 158, 11), RichText::new(format!("🔍 {:.0}%", z * 100.0))); // Orange
                     }
                     
-                    let est = (size[0] as usize).saturating_mul(size[1] as usize).saturating_mul(4);
+                    let est = size[0].saturating_mul(size[1]).saturating_mul(4);
                     ui.add_space(12.0);
                     ui.colored_label(egui::Color32::from_rgb(59, 130, 246), RichText::new(format!("💾 ~{:.1} MB", est as f64 / (1024.0 * 1024.0)))); // Blue
                     
@@ -349,7 +349,7 @@ pub(crate) fn recent_files_window(ctx: &egui::Context, app: &mut crate::app::Fil
                 }
             });
             ui.separator();
-            let mut clear_button = egui::Button::new(RichText::new("🗑️ Clear Recent Files"));
+            let clear_button = egui::Button::new(RichText::new("🗑️ Clear Recent Files"));
             let clear_color = egui::Color32::from_rgb(239, 68, 68);
             if ui.add(clear_button.fill(clear_color)).clicked() {
                 app.recent_files.clear();

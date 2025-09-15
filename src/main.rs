@@ -10,6 +10,7 @@ mod ui;
 mod input;
 mod central;
 mod style;
+mod highlight_syntect;
 
 use app::FileViewerApp;
 use eframe::egui;
