@@ -99,6 +99,9 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, ct
             ui.add_space(8.0);
             ui.label(RichText::new("Gemini File Viewer").weak());
             ui.label(RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
+            ui.add_space(4.0);
+            ui.label(RichText::new("License: Free to use with no warranty of usability or responsibility.").small());
+            ui.label(RichText::new("Authors: David Queen, Allison Bayless").small());
         });
 
         // Clear button

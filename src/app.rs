@@ -49,6 +49,9 @@ pub struct FileViewerApp {
     pub(crate) show_line_numbers: bool,
     pub(crate) word_wrap: bool,
     pub(crate) use_syntect: bool,
+    // Persisted window size (logical points)
+    pub(crate) last_window_width: f32,
+    pub(crate) last_window_height: f32,
     pub(crate) text_zoom: f32,
     pub(crate) image_zoom: f32,
     #[serde(skip)]
@@ -97,6 +100,9 @@ pub struct FileViewerApp {
     pub(crate) file_open_rx: Option<Receiver<Option<PathBuf>>>,
     #[serde(skip)]
     pub(crate) file_open_in_flight: bool,
+    // Runtime
+    #[serde(skip)]
+    pub(crate) viewport_initialized: bool,
 }
 
 impl FileViewerApp {
@@ -123,6 +129,7 @@ impl FileViewerApp {
             app.global_results = Vec::new();
             app.file_open_rx = None;
             app.file_open_in_flight = false;
+            app.viewport_initialized = false;
             return app;
         }
         if let Some(mut app) = crate::settings::load_settings_from_disk() {
@@ -143,6 +150,7 @@ impl FileViewerApp {
             app.global_results = Vec::new();
             app.file_open_rx = None;
             app.file_open_in_flight = false;
+            app.viewport_initialized = false;
             return app;
         }
         Default::default()
@@ -313,6 +321,8 @@ impl Default for FileViewerApp {
             show_line_numbers: true,
             word_wrap: true,
             use_syntect: true,
+            last_window_width: 1000.0,
+            last_window_height: 700.0,
             text_zoom: 1.0,
             image_zoom: 1.0,
             show_about: false,
@@ -335,6 +345,7 @@ impl Default for FileViewerApp {
             global_results: Vec::new(),
             file_open_rx: None,
             file_open_in_flight: false,
+            viewport_initialized: false,
         }
     }
 }
@@ -350,6 +361,16 @@ impl eframe::App for FileViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Apply visuals each frame
         self.apply_theme(ctx);
+
+        // Ensure window size respects last-run width/height but not below minimums
+        if !self.viewport_initialized {
+            let min_w = 900.0f32;
+            let min_h = 560.0f32;
+            let w = self.last_window_width.max(min_w);
+            let h = self.last_window_height.max(min_h);
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(w, h)));
+            self.viewport_initialized = true;
+        }
 
         let mut file_to_load: Option<PathBuf> = None;
 

@@ -5,18 +5,21 @@
   - Load syntaxes/themes (dump-load) at startup; map to existing `CodeTheme`
   - Gate by file size and extension; add a setting to toggle syntect on/off
   - Remove bespoke highlighter paths once parity is verified
+  - Status: scaffolding and toggle in place; rendering still plain
 
 - [ ] Multi-tab UI for text and images
   - Render a tab strip; show file name and dirty state (future)
   - Open subsequent files in new tabs; click to switch; middle-click/shortcut to close
   - Persist and restore open tabs and active tab via settings
   - Keyboard shortcuts: Next/Prev Tab, Close Tab, Reopen Closed Tab
+  - Status: internal vectors exist for text tabs, but no visible tab strip yet
 
 - [ ] Clippy: remove remaining allows and refactor highlight module
   - Introduce a `HighlightContext` struct to reduce argument counts
   - Split `append_highlighted`/`token_highlight` into smaller helpers
   - Replace nested conditionals with clearer flows; remove identical branches
   - Convert iterator `while let` loops to `for` where appropriate
+  - Status: some duplicate branches removed; minimal allows added; more refactor needed
 
 - [ ] Global Search improvements
   - Optional regex mode; toggleable case and whole-word already exist
@@ -31,6 +34,16 @@
   - Responsive toolbar layout; configurable placement of Global Search/Recent
   - Compact Recent list items with icons; keyboard navigation
   - Show file type icon and size in status bar for text files
+
+- [ ] Window sizing and persistence
+  - Enforce a minimum width to fit all toolbar buttons
+  - Restore last window size on startup; don't go below minimum
+  - Status: min size enforced; last size fields stored; applying on startup
+
+- [ ] About dialog content
+  - Include license: free to use with no warranty of usability or responsibility
+  - List authors: David Queen, Allison Bayless
+  - Status: text added in Settings → About
 
 - [ ] Performance
   - Background loading for very large text files; incremental rendering
