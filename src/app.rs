@@ -519,6 +519,15 @@ impl eframe::App for FileViewerApp {
                                 ui.label("Reset zoom");
                             });
                         });
+
+                        ui.add_space(16.0);
+                        ui.separator();
+                        ui.add_space(8.0);
+                        ui.label(RichText::new("ℹ️ About").strong());
+                        ui.add_space(6.0);
+                        ui.label(RichText::new("Authors: David Queen, Allison Bayless").small());
+                        ui.add_space(6.0);
+                        ui.label(RichText::new("Disclaimer: This software is provided ‘as is’ without warranty of any kind, whether express, implied, or statutory, including but not limited to warranties of merchantability, fitness for a particular purpose, and noninfringement. To the maximum extent permitted by law, the authors shall not be liable for any claim, damages, or other liability, whether in contract, tort, or otherwise, arising from or in connection with the software or its use.").small());
                     });
                 });
         }
