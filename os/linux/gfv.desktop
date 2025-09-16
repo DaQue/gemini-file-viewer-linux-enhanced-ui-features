@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=gfv
+Comment=Viewer for text and images
+Exec=/media/david/Shared/rust/Allison/gemini-file-viewer-linux-enhanced-ui-features/target/release/gfv %F
+Terminal=false
+Categories=Graphics;Utility;Development;
+StartupNotify=true
+Icon=gfv
