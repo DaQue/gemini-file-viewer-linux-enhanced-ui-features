@@ -104,13 +104,13 @@ fn main() -> Result<(), eframe::Error> {
             .with_inner_size([1000.0, 700.0])
             .with_min_inner_size([900.0, 560.0])
             .with_resizable(true)
-            .with_title("gfv 2.0.1")
+            .with_title("gfv 2.0.2")
             .with_icon(build_app_icon()),
         ..Default::default()
     };
 
     eframe::run_native(
-        "gfv 2.0.1",
+        "gfv 2.0.2",
         options,
         Box::new(|cc| Ok(Box::new(FileViewerApp::new(cc))))
     )
