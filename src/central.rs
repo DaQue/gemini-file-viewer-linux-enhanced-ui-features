@@ -104,7 +104,7 @@ pub(crate) fn render_central_panel(ui: &mut egui::Ui, app: &mut crate::app::File
             ui.add_space(ui.available_height() * 0.2);
             ui.label(RichText::new("📁").size(64.0));
             ui.add_space(16.0);
-            ui.label(RichText::new("Gemini File Viewer").heading().strong());
+            ui.label(RichText::new("gfv").heading().strong());
             ui.add_space(8.0);
             ui.label(RichText::new("A modern file viewer for text and images").weak());
             ui.add_space(32.0);

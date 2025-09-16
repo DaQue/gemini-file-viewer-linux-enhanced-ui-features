@@ -74,6 +74,11 @@ pub struct FileViewerApp {
     pub(crate) open_text_tabs: Vec<TextTab>,
     #[serde(skip)]
     pub(crate) active_text_tab: Option<usize>,
+    // Image tabs: store paths only; load on activation
+    #[serde(skip)]
+    pub(crate) open_image_tabs: Vec<PathBuf>,
+    #[serde(skip)]
+    pub(crate) active_image_tab: Option<usize>,
     // Simple find state
     #[serde(skip)]
     pub(crate) search_query: String,
@@ -99,7 +104,17 @@ pub struct FileViewerApp {
     #[serde(skip)]
     pub(crate) global_whole_word: bool,
     #[serde(skip)]
+    pub(crate) global_regex: bool,
+    #[serde(skip)]
     pub(crate) global_results: Vec<GlobalSearchResult>,
+    #[serde(skip)]
+    pub(crate) global_error: Option<String>,
+    // Session restore (persisted)
+    pub restore_session: bool,
+    pub session_paths: Vec<PathBuf>,
+    pub session_active: Option<usize>,
+    #[serde(skip)]
+    pub(crate) session_restored: bool,
     // Non-blocking file dialog
     #[serde(skip)]
     pub(crate) file_open_rx: Option<Receiver<Option<PathBuf>>>,
@@ -122,6 +137,8 @@ impl FileViewerApp {
             app.text_is_lossy = false;
             app.open_text_tabs = Vec::new();
             app.active_text_tab = None;
+            app.open_image_tabs = Vec::new();
+            app.active_image_tab = None;
             app.search_query = String::new();
             app.search_active = false;
             app.search_count = 0;
@@ -131,7 +148,11 @@ impl FileViewerApp {
             app.global_query = String::new();
             app.global_case_sensitive = false;
             app.global_whole_word = false;
+            app.global_regex = false;
             app.global_results = Vec::new();
+            app.global_error = None;
+            // Keep any previously persisted session fields; ensure runtime flags
+            app.session_restored = false;
             app.file_open_rx = None;
             app.file_open_in_flight = false;
             app.viewport_initialized = false;
@@ -143,6 +164,8 @@ impl FileViewerApp {
             app.text_is_lossy = false;
             app.open_text_tabs = Vec::new();
             app.active_text_tab = None;
+            app.open_image_tabs = Vec::new();
+            app.active_image_tab = None;
             app.search_query = String::new();
             app.search_active = false;
             app.search_count = 0;
@@ -152,7 +175,10 @@ impl FileViewerApp {
             app.global_query = String::new();
             app.global_case_sensitive = false;
             app.global_whole_word = false;
+            app.global_regex = false;
             app.global_results = Vec::new();
+            app.global_error = None;
+            app.session_restored = false;
             app.file_open_rx = None;
             app.file_open_in_flight = false;
             app.viewport_initialized = false;
@@ -190,6 +216,11 @@ impl FileViewerApp {
                         color_image,
                         egui::TextureOptions::LINEAR,
                     );
+                    // Track in image tabs
+                    let mut exists = false;
+                    for p in &self.open_image_tabs { if p == &path { exists = true; break; } }
+                    if !exists { self.open_image_tabs.push(path.clone()); }
+                    self.active_image_tab = self.open_image_tabs.iter().position(|p| p == &path);
                     Ok(Content::Image(texture))
                 }
                 Err(e) => Err(e),
@@ -232,7 +263,8 @@ impl FileViewerApp {
                     let overflow = self.recent_files.len() - MAX_RECENT_FILES;
                     self.recent_files.drain(0..overflow);
                 }
-                // Persist updated recents immediately
+                // Snapshot session and persist
+                self.snapshot_session();
                 crate::settings::save_settings_to_disk(self);
             }
             Err(e) => self.error_message = Some(e),
@@ -262,53 +294,38 @@ impl FileViewerApp {
             self.text_line_count = tab.line_count;
             self.text_is_lossy = tab.is_lossy;
             self.content = Some(Content::Text(tab.text));
+            // Snapshot session on switch
+            self.snapshot_session();
+            crate::settings::save_settings_to_disk(self);
         }
     }
 
     pub(crate) fn recompute_global_search(&mut self) {
         self.global_results.clear();
-        let q = self.global_query.clone();
-        if q.is_empty() { return; }
-        for (tab_idx, tab) in self.open_text_tabs.iter().enumerate() {
-            let mut match_counter_in_tab: usize = 0;
-            for (line_idx, line) in tab.text.lines().enumerate() {
-                let mut hay = line.to_string();
-                let mut needle = q.clone();
-                if !self.global_case_sensitive {
-                    hay = hay.to_ascii_lowercase();
-                    needle = needle.to_ascii_lowercase();
-                }
-                let mut offset_in_line: usize = 0;
-                let original_line = line;
-                while let Some(pos) = hay[offset_in_line..].find(&needle) {
-                    let abs_pos = offset_in_line + pos;
-                    // Whole-word check
-                    if self.global_whole_word {
-                        let left_ok = abs_pos == 0 || !original_line.chars().nth(abs_pos - 1).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
-                        let right_index = abs_pos + q.len();
-                        let right_ok = right_index >= original_line.len() || !original_line.chars().nth(right_index).map(|c| c.is_alphanumeric() || c == '_').unwrap_or(false);
-                        if !(left_ok && right_ok) {
-                            offset_in_line = abs_pos + needle.len();
-                            continue;
-                        }
-                    }
-                    // Create a small snippet around the match
-                    let start = abs_pos.saturating_sub(40);
-                    let end = (abs_pos + q.len()).saturating_add(40).min(original_line.len());
-                    let snippet = original_line[start..end].to_string();
-                    self.global_results.push(GlobalSearchResult {
-                        tab_index: tab_idx,
-                        path: tab.path.clone(),
-                        line_index: line_idx,
-                        snippet,
-                        match_index_in_tab: match_counter_in_tab,
-                    });
-                    match_counter_in_tab += 1;
-                    offset_in_line = abs_pos + needle.len();
-                    if offset_in_line >= hay.len() { break; }
+        self.global_error = None;
+        match crate::search::global_search(&self.open_text_tabs, &self.global_query, self.global_case_sensitive, self.global_whole_word, self.global_regex) {
+            Ok(res) => self.global_results = res,
+            Err(e) => { self.global_error = Some(e); }
+        }
+    }
+
+    pub(crate) fn snapshot_session(&mut self) {
+        // Build session_paths from open text tabs plus current path (for images/non-text)
+        let mut paths: Vec<PathBuf> = self.open_text_tabs.iter().map(|t| t.path.clone()).collect();
+        if let Some(cur) = self.current_path.clone() {
+            let is_text = crate::io::is_supported_text(&cur);
+            if !is_text {
+                if !paths.contains(&cur) {
+                    paths.push(cur);
                 }
             }
         }
+        // Filter out non-existing files
+        paths.retain(|p| p.exists());
+        // Active index is current_path in paths if present
+        let active = self.current_path.as_ref().and_then(|cur| paths.iter().position(|p| p == cur));
+        self.session_paths = paths;
+        self.session_active = active;
     }
 
     // settings helpers moved to crate::settings
@@ -340,6 +357,8 @@ impl Default for FileViewerApp {
             text_is_lossy: false,
             open_text_tabs: Vec::new(),
             active_text_tab: None,
+            open_image_tabs: Vec::new(),
+            active_image_tab: None,
             search_query: String::new(),
             search_active: false,
             search_count: 0,
@@ -350,7 +369,13 @@ impl Default for FileViewerApp {
             global_query: String::new(),
             global_case_sensitive: false,
             global_whole_word: false,
+            global_regex: false,
             global_results: Vec::new(),
+            global_error: None,
+            restore_session: false,
+            session_paths: Vec::new(),
+            session_active: None,
+            session_restored: false,
             file_open_rx: None,
             file_open_in_flight: false,
             viewport_initialized: false,
@@ -398,14 +423,16 @@ impl eframe::App for FileViewerApp {
                             if !opened_first {
                                 file_to_load = Some(path);
                                 opened_first = true;
-                            } else if crate::io::is_supported_text(&path)
-                                && let Ok((text, lossy, lines)) = crate::io::load_text(&path) {
-                                // Add as background tab without switching
-                                let mut exists = false;
-                                for t in &self.open_text_tabs { if t.path == path { exists = true; break; } }
-                                if !exists {
+                            } else if crate::io::is_supported_text(&path) && let Ok((text, lossy, lines)) = crate::io::load_text(&path) {
+                                // Add text as background tab without switching
+                                if !self.open_text_tabs.iter().any(|t| t.path == path) {
                                     self.open_text_tabs.push(TextTab { path: path.clone(), text, is_lossy: lossy, line_count: lines });
                                     extra_text_tabs += 1;
+                                }
+                            } else if crate::io::is_supported_image(&path) {
+                                // Track image tab without switching
+                                if !self.open_image_tabs.iter().any(|p| p == &path) {
+                                    self.open_image_tabs.push(path.clone());
                                 }
                             }
                         } else {
@@ -443,7 +470,7 @@ impl eframe::App for FileViewerApp {
 
         // Modern About dialog
         if self.show_about {
-            egui::Window::new("About Gemini File Viewer")
+            egui::Window::new("About gfv")
                 .collapsible(false)
                 .resizable(false)
                 .open(&mut self.show_about)
@@ -451,8 +478,7 @@ impl eframe::App for FileViewerApp {
                     ui.vertical_centered(|ui| {
                         ui.label(RichText::new("📁").size(48.0));
                         ui.add_space(12.0);
-                        ui.label(RichText::new("Gemini File Viewer").heading().strong());
-                        ui.label(RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
+                        ui.label(RichText::new(format!("gfv {}", env!("CARGO_PKG_VERSION"))).heading().strong());
                         ui.add_space(16.0);
                         
                         ui.separator();
@@ -496,48 +522,7 @@ impl eframe::App for FileViewerApp {
                     });
                 });
         }
-        if self.show_settings_window {
-            let mut dark = self.dark_mode;
-            let mut lines = self.show_line_numbers;
-            let mut syn = self.use_syntect;
-            let mut open = self.show_settings_window;
-            egui::Window::new("Settings")
-                .collapsible(false)
-                .resizable(true)
-                .min_width(520.0)
-                .open(&mut open)
-                .show(ctx, |ui| {
-                    ui.label(RichText::new("🎨 Display Settings").strong());
-                    ui.add_space(8.0);
-                    ui.checkbox(&mut dark, RichText::new("🌙 Dark Mode").strong());
-                    ui.checkbox(&mut lines, RichText::new("📊 Line Numbers").strong());
-                    ui.checkbox(&mut syn, RichText::new("🎨 Syntect Highlighting").strong());
-                    ui.add_space(12.0);
-                    ui.separator();
-                    ui.add_space(8.0);
-                    ui.label(RichText::new("ℹ️ About").strong());
-                    ui.add_space(8.0);
-                    ui.label(RichText::new("Gemini File Viewer").weak());
-                    ui.label(RichText::new(format!("Version {}", env!("CARGO_PKG_VERSION"))).weak());
-                    ui.add_space(4.0);
-                    ui.label(RichText::new("Disclaimer: This software is provided “as is” without warranty of any kind, whether express, implied, or statutory, including but not limited to warranties of merchantability, fitness for a particular purpose, and noninfringement. To the maximum extent permitted by law, the authors shall not be liable for any claim, damages, or other liability, whether in contract, tort, or otherwise, arising from or in connection with the software or its use.").small());
-                    ui.label(RichText::new("Authors: David Queen, Allison Bayless").small());
-                    ui.add_space(12.0);
-                    ui.separator();
-                    ui.add_space(8.0);
-                    if ui.button(RichText::new("⌨️ Show Keybindings").strong()).clicked() {
-                        self.show_keybindings = true;
-                    }
-                });
-            // Apply after window closure to avoid borrow conflict
-            if self.dark_mode != dark { self.dark_mode = dark; self.apply_theme(ctx); }
-            if self.show_line_numbers != lines || self.use_syntect != syn || self.dark_mode != dark {
-                self.show_line_numbers = lines;
-                self.use_syntect = syn;
-                crate::settings::save_settings_to_disk(self);
-            }
-            self.show_settings_window = open;
-        }
+        if self.show_settings_window { crate::ui::settings_window(ctx, self); crate::settings::save_settings_to_disk(self); }
         if toggle_dark {
             self.dark_mode = !self.dark_mode;
             self.apply_theme(ctx);
@@ -598,6 +583,34 @@ impl eframe::App for FileViewerApp {
         // Auxiliary windows
         crate::ui::recent_files_window(ctx, self, &mut file_to_load);
         crate::ui::global_search_window(ctx, self);
+        // Session restore: once per startup, after UI is initialized
+        if self.restore_session && !self.session_restored {
+            self.session_restored = true;
+            let mut opened_any = false;
+            let active_idx = self.session_active.unwrap_or(0);
+            for (idx, p) in self.session_paths.clone().into_iter().enumerate() {
+                if p.exists() {
+                    if idx == active_idx {
+                        file_to_load = Some(p.clone());
+                        opened_any = true;
+                    } else if crate::io::is_supported_text(&p) {
+                        if let Ok((text, lossy, lines)) = crate::io::load_text(&p) {
+                            let exists = self.open_text_tabs.iter().any(|t| t.path == p);
+                            if !exists {
+                                self.open_text_tabs.push(TextTab { path: p.clone(), text, is_lossy: lossy, line_count: lines });
+                            }
+                        }
+                    } else if crate::io::is_supported_image(&p) {
+                        // Defer actual image load to when activated
+                        // Track via current_path if none yet
+                        if self.current_path.is_none() && !opened_any {
+                            file_to_load = Some(p.clone());
+                            opened_any = true;
+                        }
+                    }
+                }
+            }
+        }
 
         // Status Bar
         egui::TopBottomPanel::bottom("statusbar").show(ctx, |ui| {

@@ -1,4 +1,4 @@
-Gemini File Viewer (Linux)
+gfv (Linux)
 
 Pre-beta
 - This app is currently in pre-beta. Features and UI may change and bugs are expected. Please report issues and suggestions.
@@ -29,16 +29,16 @@ Prerequisites
 
 Notes on dialogs and Wayland
 - rfd uses desktop portals on modern Linux. Ensure xdg-desktop-portal and a backend (gtk/gnome/kde) are running.
-- If you hit Wayland issues, force X11: WINIT_UNIX_BACKEND=x11 ./gemini-file-viewer-linux
+- If you hit Wayland issues, force X11: WINIT_UNIX_BACKEND=x11 ./gfv
 
 Build
 - Release (optimized):
   cargo build --release
-  ./target/release/gemini-file-viewer-linux
+  ./target/release/gfv
 
 - Debug (faster compile):
   cargo build
-  ./target/debug/gemini-file-viewer-linux
+  ./target/debug/gfv
 
 Portable-ish (musl)
 - Install musl target and tools:
@@ -50,8 +50,11 @@ Portable-ish (musl)
 
 Packaging
 - Simple tarball:
-  tar -C target/release -czf gemini-file-viewer-linux-x86_64.tar.gz gemini-file-viewer-linux
+  tar -C target/release -czf gfv-linux-x86_64.tar.gz gfv
 - Optional desktop integration: ship a .desktop file and icon under ~/.local/share/applications and ~/.local/share/icons.
+
+Windows
+- EXE now embeds an icon when building on Windows (via build.rs). Pinned taskbar and drag/drop behave as expected.
 
 Scripts
 - scripts/install-deps-ubuntu.sh: Installs common build deps on Ubuntu/Debian.

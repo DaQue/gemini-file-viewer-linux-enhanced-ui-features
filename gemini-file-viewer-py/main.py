@@ -142,12 +142,12 @@ class ImageView(QtWidgets.QLabel):
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Gemini File Viewer (Py)")
+        self.setWindowTitle("gfv (Py)")
         self.resize(1000, 700)
 
         self._current_path: Path | None = None
         self._recents: list[Path] = []
-        self._settings_path = Path.home() / ".gemini_file_viewer_py" / "settings.json"
+        self._settings_path = Path.home() / ".gfv_py" / "settings.json"
         self._dark_mode: bool = True
         self._wrap: bool = True
         self._default_text_zoom: float = 1.0

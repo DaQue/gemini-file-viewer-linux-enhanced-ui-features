@@ -10,7 +10,7 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
         ui.add_space(4.0);
         ui.label(RichText::new("📁").size(20.0));
         ui.add_space(8.0);
-        ui.label(RichText::new("Gemini File Viewer").heading().strong());
+        ui.label(RichText::new("gfv").heading().strong());
         ui.add_space(8.0);
         ui.label(RichText::new("Pre-beta").weak().small());
     });
@@ -53,6 +53,28 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
         global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
         if ui.add(global_button).clicked() {
             app.show_global_search_window = !app.show_global_search_window;
+        }
+
+        // One-shot Reopen Session
+        let can_reopen = !app.session_paths.is_empty();
+        let mut reopen_button = egui::Button::new(RichText::new("⟳ Reopen Session").strong());
+        reopen_button = reopen_button.fill(egui::Color32::from_rgb(107, 114, 128)); // Gray
+        if ui.add_enabled(can_reopen, reopen_button).on_hover_text("Open last session once").clicked() {
+            let active_idx = app.session_active.unwrap_or(0);
+            for (idx, p) in app.session_paths.clone().into_iter().enumerate() {
+                if p.exists() {
+                    if idx == active_idx {
+                        *file_to_load = Some(p.clone());
+                    } else if crate::io::is_supported_text(&p) {
+                        if let Ok((text, lossy, lines)) = crate::io::load_text(&p) {
+                            let exists = app.open_text_tabs.iter().any(|t| t.path == p);
+                            if !exists {
+                                app.open_text_tabs.push(crate::app::TextTab { path: p.clone(), text, is_lossy: lossy, line_count: lines });
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Themes button
@@ -101,6 +123,8 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
 
         // (global search was moved back to earlier position)
     });
+
+    // (image tabs moved into the unified top tab strip)
 
     // Image controls (zoom and fit)
     if matches!(app.content, Some(crate::app::Content::Image(_))) {
@@ -314,41 +338,42 @@ pub(crate) fn status_extra(ui: &mut egui::Ui, app: &mut crate::app::FileViewerAp
 }
 
 pub(crate) fn tab_strip(ctx: &egui::Context, app: &mut crate::app::FileViewerApp) {
-    if app.open_text_tabs.is_empty() {
-        return;
-    }
     egui::TopBottomPanel::top("tabstrip").show(ctx, |ui| {
         egui::ScrollArea::horizontal().auto_shrink([false, true]).show(ui, |ui| {
-            let mut to_switch: Option<usize> = None;
-            let mut to_close: Option<usize> = None;
+            let mut text_to_switch: Option<usize> = None;
+            let mut text_to_close: Option<usize> = None;
+            let mut img_to_switch: Option<usize> = None;
+            let mut img_to_close: Option<usize> = None;
             ui.horizontal(|ui| {
+                // Text tabs first
                 for (idx, tab) in app.open_text_tabs.iter().enumerate() {
-                    let is_active = app.active_text_tab == Some(idx);
-                    let file_name = tab
-                        .path
-                        .file_name()
-                        .and_then(|s| s.to_str())
-                        .unwrap_or("(untitled)");
+                    let is_active = matches!(app.content, Some(crate::app::Content::Text(_))) && app.active_text_tab == Some(idx);
+                    let file_name = tab.path.file_name().and_then(|s| s.to_str()).unwrap_or("(untitled)");
                     let mut frame = egui::Frame::group(ui.style());
-                    if is_active {
-                        frame = frame.fill(egui::Color32::from_rgb(30, 41, 59));
-                    }
+                    if is_active { frame = frame.fill(egui::Color32::from_rgb(30, 41, 59)); }
                     frame.show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            if ui.selectable_label(is_active, egui::RichText::new(file_name).monospace()).clicked() {
-                                to_switch = Some(idx);
-                            }
-                            if ui.small_button("✕").on_hover_text("Close tab").clicked() {
-                                to_close = Some(idx);
-                            }
+                            if ui.selectable_label(is_active, egui::RichText::new(file_name).monospace()).clicked() { text_to_switch = Some(idx); }
+                            if ui.small_button("✕").on_hover_text("Close tab").clicked() { text_to_close = Some(idx); }
+                        });
+                    });
+                }
+                // Image tabs after
+                for (idx, path) in app.open_image_tabs.iter().enumerate() {
+                    let is_active = matches!(app.content, Some(crate::app::Content::Image(_))) && app.active_image_tab == Some(idx);
+                    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("(image)");
+                    let mut frame = egui::Frame::group(ui.style());
+                    if is_active { frame = frame.fill(egui::Color32::from_rgb(30, 41, 59)); }
+                    frame.show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            if ui.selectable_label(is_active, egui::RichText::new(file_name)).clicked() { img_to_switch = Some(idx); }
+                            if ui.small_button("✕").on_hover_text("Close image tab").clicked() { img_to_close = Some(idx); }
                         });
                     });
                 }
             });
-            if let Some(idx) = to_switch {
-                app.switch_to_text_tab(idx);
-            }
-            if let Some(idx) = to_close {
+            if let Some(idx) = text_to_switch { app.switch_to_text_tab(idx); }
+            if let Some(idx) = text_to_close {
                 // Remove the tab and update active/content
                 let was_active = app.active_text_tab == Some(idx);
                 if idx < app.open_text_tabs.len() {
@@ -371,6 +396,17 @@ pub(crate) fn tab_strip(ctx: &egui::Context, app: &mut crate::app::FileViewerApp
                         if a > idx { app.active_text_tab = Some(a - 1); }
                     }
                 }
+            }
+            if let Some(idx) = img_to_switch {
+                if let Some(p) = app.open_image_tabs.get(idx).cloned() { app.active_image_tab = Some(idx); ctx.memory_mut(|m| m.request_focus(egui::Id::new("central"))); }
+            }
+            if let Some(idx) = img_to_close {
+                if idx < app.open_image_tabs.len() { app.open_image_tabs.remove(idx); }
+                if app.open_image_tabs.is_empty() && matches!(app.content, Some(crate::app::Content::Image(_))) {
+                    app.content = None;
+                    app.current_path = None;
+                    app.active_image_tab = None;
+                } else if let Some(a) = app.active_image_tab { if a > idx { app.active_image_tab = Some(a - 1); } }
             }
         });
     });
@@ -401,6 +437,28 @@ pub(crate) fn recent_files_window(ctx: &egui::Context, app: &mut crate::app::Fil
                 }
             });
             ui.separator();
+            // One-shot reopen session
+            let can_reopen = !app.session_paths.is_empty();
+            if ui.add_enabled(can_reopen, egui::Button::new(RichText::new("⟳ Reopen Last Session").strong())).clicked() {
+                let active_idx = app.session_active.unwrap_or(0);
+                for (idx, p) in app.session_paths.clone().into_iter().enumerate() {
+                    if p.exists() {
+                        if idx == active_idx {
+                            *file_to_load = Some(p.clone());
+                        } else if crate::io::is_supported_text(&p) {
+                            if let Ok((text, lossy, lines)) = crate::io::load_text(&p) {
+                                let exists = app.open_text_tabs.iter().any(|t| t.path == p);
+                                if !exists {
+                                    app.open_text_tabs.push(crate::app::TextTab { path: p.clone(), text, is_lossy: lossy, line_count: lines });
+                                }
+                            }
+                        }
+                    }
+                }
+                // Close window after action
+                app.show_recent_window = false;
+            }
+            ui.add_space(8.0);
             let clear_button = egui::Button::new(RichText::new("🗑️ Clear Recent Files"));
             let clear_color = egui::Color32::from_rgb(239, 68, 68);
             if ui.add(clear_button.fill(clear_color)).clicked() {
@@ -432,8 +490,16 @@ pub(crate) fn global_search_window(ctx: &egui::Context, app: &mut crate::app::Fi
                 });
                 ui.horizontal(|ui| {
                     ui.checkbox(&mut app.global_case_sensitive, "Case sensitive");
-                    ui.checkbox(&mut app.global_whole_word, "Whole word");
+                    let ww = ui.checkbox(&mut app.global_whole_word, "Whole word");
+                    if app.global_regex {
+                        // Visually disable by graying out when regex mode is on
+                        // and force it off to avoid confusion
+                        app.global_whole_word = false;
+                        ww.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Checkbox, false, "Whole word (disabled in regex)"));
+                    }
+                    ui.checkbox(&mut app.global_regex, "Regex");
                 });
+                if let Some(err) = &app.global_error { ui.colored_label(egui::Color32::RED, err); }
                 ui.separator();
                 egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                     for (idx, res) in app.global_results.clone().into_iter().enumerate() {
@@ -461,5 +527,28 @@ pub(crate) fn global_search_window(ctx: &egui::Context, app: &mut crate::app::Fi
             });
         });
     app.show_global_search_window = open_flag;
+}
+
+pub(crate) fn settings_window(ctx: &egui::Context, app: &mut crate::app::FileViewerApp) {
+    if !app.show_settings_window { return; }
+    let mut open = app.show_settings_window;
+    egui::Window::new("Settings")
+        .collapsible(false)
+        .resizable(true)
+        .min_width(520.0)
+        .open(&mut open)
+        .show(ctx, |ui| {
+            ui.label(RichText::new("🎨 Display Settings").strong());
+            ui.add_space(8.0);
+            ui.checkbox(&mut app.dark_mode, RichText::new("🌙 Dark Mode").strong());
+            ui.checkbox(&mut app.show_line_numbers, RichText::new("📊 Line Numbers").strong());
+            ui.checkbox(&mut app.use_syntect, RichText::new("🎨 Syntect Highlighting").strong());
+            ui.add_space(12.0);
+            ui.separator();
+            ui.add_space(8.0);
+            ui.label(RichText::new("💾 Session").strong());
+            ui.checkbox(&mut app.restore_session, "Restore previous session on startup");
+        });
+    app.show_settings_window = open;
 }
 

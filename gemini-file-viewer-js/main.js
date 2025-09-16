@@ -12,7 +12,7 @@ async function createWindow() {
     webPreferences: {
       preload: path.join(process.cwd(), 'preload.cjs')
     },
-    title: 'Gemini File Viewer (JS)'
+    title: 'gfv (JS)'
   });
 
   await win.loadFile('renderer/index.html');

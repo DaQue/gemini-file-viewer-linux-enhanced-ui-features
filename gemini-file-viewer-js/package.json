@@ -1,5 +1,5 @@
 {
-  "name": "gemini-file-viewer-js",
+  "name": "gfv-js",
   "version": "0.1.0",
   "private": true,
   "description": "Desktop file viewer for images and text (Electron).",
@@ -14,8 +14,8 @@
     "dist:nsis": "electron-builder --win nsis"
   },
   "build": {
-    "appId": "com.david.geminifileviewer",
-    "productName": "Gemini File Viewer",
+    "appId": "com.david.gfv",
+    "productName": "gfv",
     "directories": {
       "output": "dist"
     },
@@ -36,10 +36,10 @@
       "oneClick": true,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "GeminiFileViewer-Setup-${version}.${ext}"
+      "artifactName": "gfv-Setup-${version}.${ext}"
     },
     "portable": {
-      "artifactName": "GeminiFileViewer-Portable-${version}.exe"
+      "artifactName": "gfv-Portable-${version}.exe"
     }
   },
   "devDependencies": {

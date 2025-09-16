@@ -14,7 +14,15 @@ pub struct HighlightContext<'a> {
     pub theme: CodeTheme,
 }
 
-#[allow(clippy::too_many_arguments)]
+// Shared text format for comments
+fn comment_text_format(font_id: &FontId, theme: &CodeTheme) -> egui::TextFormat {
+    egui::TextFormat {
+        font_id: font_id.clone(),
+        color: theme.comment(),
+        ..Default::default()
+    }
+}
+
 pub(crate) fn append_with_search(
     job: &mut LayoutJob,
     text: &str,
@@ -54,7 +62,6 @@ pub(crate) fn append_with_search(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn token_highlight(
     job: &mut LayoutJob,
     text: &str,
@@ -130,7 +137,6 @@ pub(crate) fn token_highlight(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub(crate) fn append_highlighted(
     job: &mut LayoutJob,
     line: &str,
@@ -142,12 +148,12 @@ pub(crate) fn append_highlighted(
             if *ctx.in_block_comment {
                 if let Some(end) = line[i..].find("*/") {
                     let end_abs = i + end + 2;
-                    let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                    let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                     job.append(&line[i..end_abs], 0.0, fmt);
                     *ctx.in_block_comment = false;
                     i = end_abs;
                 } else {
-                    let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                    let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                     job.append(&line[i..], 0.0, fmt);
                     return;
                 }
@@ -161,7 +167,7 @@ pub(crate) fn append_highlighted(
                         if psl > 0 {
                             token_highlight(job, &rest[..psl], ctx);
                         }
-                        let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                        let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                         job.append(&rest[psl..], 0.0, fmt);
                         return;
                     }
@@ -169,7 +175,7 @@ pub(crate) fn append_highlighted(
                         if psl > 0 {
                             token_highlight(job, &rest[..psl], ctx);
                         }
-                        let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                        let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                         job.append(&rest[psl..], 0.0, fmt);
                         return;
                     }
@@ -181,12 +187,12 @@ pub(crate) fn append_highlighted(
                         let tail = &rest[after..];
                         if let Some(end) = tail.find("*/") {
                             let end_abs = i + after + end + 2;
-                            let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                            let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                             job.append(&line[i + pblk..end_abs], 0.0, fmt);
                             i = end_abs;
                             continue;
                         } else {
-                            let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                            let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                             job.append(&rest[pblk..], 0.0, fmt);
                             *ctx.in_block_comment = true;
                             return;
@@ -204,12 +210,12 @@ pub(crate) fn append_highlighted(
                         let tail = &rest[after..];
                         if let Some(end) = tail.find("*/") {
                             let end_abs = i + after + end + 2;
-                            let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                            let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                             job.append(&line[i + pblk..end_abs], 0.0, fmt);
                             i = end_abs;
                             continue;
                         } else {
-                            let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+                            let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
                             job.append(&rest[pblk..], 0.0, fmt);
                             *ctx.in_block_comment = true;
                             return;
@@ -223,7 +229,7 @@ pub(crate) fn append_highlighted(
         let comment_prefix = if ctx.ext == "py" { "#" } else { comment_prefix };
         if !comment_prefix.is_empty() && let Some(pos) = line.find(comment_prefix) {
             append_highlighted(job, &line[..pos], ctx);
-            let fmt = egui::TextFormat { font_id: ctx.font_id.clone(), color: ctx.theme.comment(), ..Default::default() };
+            let fmt = comment_text_format(&ctx.font_id, &ctx.theme);
             job.append(&line[pos..], 0.0, fmt);
             return;
         }

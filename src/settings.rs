@@ -2,7 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 pub(crate) fn settings_path() -> Option<PathBuf> {
-    directories::ProjectDirs::from("", "", "gemini-file-viewer")
+    directories::ProjectDirs::from("", "", "gfv")
         .map(|dirs| dirs.config_dir().join("settings.json"))
 }
 

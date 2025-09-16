@@ -1,4 +1,4 @@
-Gemini File Viewer (Python, PySide6)
+gfv (Python, PySide6)
 
 Summary
 - Desktop viewer for text and images with: Open, Recent, Fit to Window, Zoom +/-/100%, Find, basic status.
