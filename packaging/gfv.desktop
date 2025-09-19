@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=GFV
+Comment=Gemini File Viewer (Rust + egui)
+Exec=/FULL/PATH/TO/gfv
+Icon=gfv
+Terminal=false
+Categories=Utility;Graphics;Development;
+StartupNotify=true

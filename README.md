@@ -51,7 +51,14 @@ Portable-ish (musl)
 Packaging
 - Simple tarball:
   tar -C target/release -czf gfv-linux-x86_64.tar.gz gfv
-- Optional desktop integration: ship a .desktop file and icon under ~/.local/share/applications and ~/.local/share/icons.
+ - Desktop integration (Linux):
+   - Copy icons to user icon theme (HiDPI sizes optional but recommended):
+     for s in 16 32 48 64 128 256; do mkdir -p "$HOME/.local/share/icons/hicolor/${s}x${s}/apps"; cp assets/icons/icon_${s}.png "$HOME/.local/share/icons/hicolor/${s}x${s}/apps/gfv.png"; done
+     # If available, also provide 512x512: copy assets/icons/icon_512.png to ~/.local/share/icons/hicolor/512x512/apps/gfv.png
+   - Install desktop entry:
+     mkdir -p "$HOME/.local/share/applications" && cp os/linux/gfv.desktop "$HOME/.local/share/applications/gfv.desktop"
+   - Refresh caches (if present): update-desktop-database "$HOME/.local/share/applications"; gtk-update-icon-cache -f "$HOME/.local/share/icons/hicolor"
+   - Alternative template: see packaging/gfv.desktop (edit Exec= to your binary path)
 
 Windows
 - EXE now embeds an icon when building on Windows (via build.rs). Pinned taskbar and drag/drop behave as expected.

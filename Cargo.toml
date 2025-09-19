@@ -14,10 +14,10 @@ serde_json = "1"
 directories = "5"
 syntect = { version = "5.2.0", features = ["dump-load", "parsing", "html", "regex-onig"] }
 regex = "1"
+ico = "0.3"
 
 [target.'cfg(windows)'.build-dependencies]
 winres = "0.1"
-ico = "0.3"
 
 [profile.release]
 # Smaller binary tweaks

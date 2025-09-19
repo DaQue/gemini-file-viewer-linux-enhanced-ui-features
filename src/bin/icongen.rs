@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+use ico::{IconDir, IconDirEntry, IconImage, ResourceType};
 
 fn build_app_icon_rgba(size: u32) -> (Vec<u8>, u32, u32) {
     let mut rgba: Vec<u8> = vec![0; (size * size * 4) as usize];
@@ -8,7 +9,7 @@ fn build_app_icon_rgba(size: u32) -> (Vec<u8>, u32, u32) {
         let i = to_idx(x, y);
         if i + 3 < buf.len() { buf[i] = c[0]; buf[i + 1] = c[1]; buf[i + 2] = c[2]; buf[i + 3] = c[3]; }
     }
-    let mut fill_rect = |buf: &mut [u8], x0: u32, y0: u32, w: u32, h: u32, c: [u8; 4]| {
+    let fill_rect = |buf: &mut [u8], x0: u32, y0: u32, w: u32, h: u32, c: [u8; 4]| {
         for yy in y0..(y0 + h).min(size) {
             for xx in x0..(x0 + w).min(size) {
                 put_px(buf, &to_idx, xx, yy, c);
@@ -75,11 +76,27 @@ fn build_app_icon_rgba(size: u32) -> (Vec<u8>, u32, u32) {
 }
 
 fn main() {
-    let (rgba, w, h) = build_app_icon_rgba(256);
-    let path = Path::new("assets");
-    let _ = fs::create_dir_all(path);
-    let out = path.join("icon_256.png");
-    let img = image::RgbaImage::from_vec(w, h, rgba).expect("rgba to image");
-    img.save(&out).expect("save icon");
-    println!("wrote {}", out.display());
+    let out_dir = Path::new("assets").join("icons");
+    fs::create_dir_all(&out_dir).expect("create assets/icons");
+    let sizes = [16u32, 32, 48, 64, 128, 256, 512];
+    for &s in &sizes {
+        let (rgba, w, h) = build_app_icon_rgba(s);
+        let img = image::RgbaImage::from_vec(w, h, rgba).expect("rgba to image");
+        let out = out_dir.join(format!("icon_{}.png", s));
+        img.save(&out).expect("save icon png");
+        println!("wrote {}", out.display());
+    }
+
+    // Build multi-size ICO (common sizes; Windows supports up to 256)
+    let mut dir = IconDir::new(ResourceType::Icon);
+    for &s in &[16u32, 32, 48, 64, 128, 256] {
+        let (rgba, _w, _h) = build_app_icon_rgba(s);
+        let image = IconImage::from_rgba_data(s, s, rgba);
+        let entry = IconDirEntry::encode(&image).expect("encode ico entry");
+        dir.add_entry(entry);
+    }
+    let ico_path = out_dir.join("icon.ico");
+    let mut f = fs::File::create(&ico_path).expect("create ico");
+    dir.write(&mut f).expect("write ico");
+    println!("wrote {}", ico_path.display());
 }
