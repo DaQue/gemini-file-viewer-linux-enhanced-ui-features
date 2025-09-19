@@ -16,6 +16,13 @@ use app::FileViewerApp;
 use eframe::egui;
 
 fn build_app_icon() -> egui::IconData {
+    // Try to load the bundled PNG artwork first
+    if let Ok(img) = image::load_from_memory(include_bytes!("../assets/icons/icon_256.png")) {
+        let rgba = img.to_rgba8();
+        let (width, height) = rgba.dimensions();
+        return egui::IconData { rgba: rgba.into_raw(), width, height };
+    }
+
     let size: u32 = 256;
     let mut rgba: Vec<u8> = vec![0; (size * size * 4) as usize];
     let to_idx = |x: u32, y: u32| -> usize { ((y * size + x) * 4) as usize };
@@ -105,7 +112,8 @@ fn main() -> Result<(), eframe::Error> {
             .with_min_inner_size([900.0, 560.0])
             .with_resizable(true)
             .with_title("gfv 2.0.2")
-            .with_icon(build_app_icon()),
+            .with_icon(build_app_icon())
+            .with_app_id("gfv"),
         ..Default::default()
     };
 

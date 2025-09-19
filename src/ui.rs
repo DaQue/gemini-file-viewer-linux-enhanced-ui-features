@@ -19,110 +19,109 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
     ui.separator();
     ui.add_space(8.0);
 
-    // All toolbar buttons in single horizontal layout for perfect alignment
-    ui.horizontal(|ui| {
-        // Open File button
-        let mut open_button = egui::Button::new(RichText::new("📂 Open File").strong());
-        open_button = open_button.fill(egui::Color32::from_rgb(34, 197, 94)); // Green
-        let open_clicked = ui.add_enabled(!app.file_open_in_flight, open_button).clicked();
-        if open_clicked {
-            // Use blocking dialog here for reliability
-            if let Some(path) = rfd::FileDialog::new()
-                .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
-                .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
-                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
-                .pick_file() {
-                *file_to_load = Some(path);
-            }
+    // Open File button
+    let mut open_button = egui::Button::new(RichText::new("📂 Open File").strong());
+    open_button = open_button.fill(egui::Color32::from_rgb(34, 197, 94)); // Green
+    let open_clicked = ui.add_enabled(!app.file_open_in_flight, open_button).clicked();
+    if open_clicked {
+        // Use blocking dialog here for reliability
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
+            .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
+            .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
+            .pick_file() {
+            *file_to_load = Some(path);
         }
-        if app.file_open_in_flight {
-            ui.add_space(8.0);
-            ui.add(egui::Spinner::new().size(14.0));
-            ui.label(RichText::new("Opening file…").weak());
-        }
+    }
+    if app.file_open_in_flight {
+        ui.add_space(8.0);
+        ui.add(egui::Spinner::new().size(14.0));
+        ui.label(RichText::new("Opening file…").weak());
+    }
 
-        // Recent Files window toggle (short label to keep near Open)
-        let mut recent_button = egui::Button::new(RichText::new("📋 Recent").strong());
-        recent_button = recent_button.fill(egui::Color32::from_rgb(59, 130, 246)); // Blue
-        if ui.add_enabled(!app.file_open_in_flight, recent_button).clicked() {
-            app.show_recent_window = !app.show_recent_window;
-        }
+    // Recent Files window toggle (short label to keep near Open)
+    let mut recent_button = egui::Button::new(RichText::new("📋 Recent").strong());
+    recent_button = recent_button.fill(egui::Color32::from_rgb(59, 130, 246)); // Blue
+    if ui.add_enabled(!app.file_open_in_flight, recent_button).clicked() {
+        app.show_recent_window = !app.show_recent_window;
+    }
 
-        // Global Search window toggle (restored position)
-        let mut global_button = egui::Button::new(RichText::new("🔎 Global Search").strong());
-        global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
-        if ui.add(global_button).clicked() {
-            app.show_global_search_window = !app.show_global_search_window;
-        }
+    // Global Search window toggle (restored position)
+    let mut global_button = egui::Button::new(RichText::new("🔎 Global Search").strong());
+    global_button = global_button.fill(egui::Color32::from_rgb(168, 85, 247)); // Purple
+    if ui.add(global_button).clicked() {
+        app.show_global_search_window = !app.show_global_search_window;
+    }
 
-        // One-shot Reopen Session
-        let can_reopen = !app.session_paths.is_empty();
-        let mut reopen_button = egui::Button::new(RichText::new("⟳ Reopen Session").strong());
-        reopen_button = reopen_button.fill(egui::Color32::from_rgb(107, 114, 128)); // Gray
-        if ui.add_enabled(can_reopen, reopen_button).on_hover_text("Open last session once").clicked() {
-            let active_idx = app.session_active.unwrap_or(0);
-            for (idx, p) in app.session_paths.clone().into_iter().enumerate() {
-                if p.exists() {
-                    if idx == active_idx {
-                        *file_to_load = Some(p.clone());
-                    } else if crate::io::is_supported_text(&p) {
-                        if let Ok((text, lossy, lines)) = crate::io::load_text(&p) {
-                            let exists = app.open_text_tabs.iter().any(|t| t.path == p);
-                            if !exists {
-                                app.open_text_tabs.push(crate::app::TextTab { path: p.clone(), text, is_lossy: lossy, line_count: lines });
-                            }
+    // One-shot Reopen Session
+    let can_reopen = !app.session_paths.is_empty();
+    let mut reopen_button = egui::Button::new(RichText::new("⟳ Reopen Session").strong());
+    reopen_button = reopen_button.fill(egui::Color32::from_rgb(107, 114, 128)); // Gray
+    if ui.add_enabled(can_reopen, reopen_button).on_hover_text("Open last session once").clicked() {
+        let active_idx = app.session_active.unwrap_or(0);
+        for (idx, p) in app.session_paths.clone().into_iter().enumerate() {
+            if p.exists() {
+                if idx == active_idx {
+                    *file_to_load = Some(p.clone());
+                } else if crate::io::is_supported_text(&p) {
+                    if let Ok((text, lossy, lines)) = crate::io::load_text(&p) {
+                        let exists = app.open_text_tabs.iter().any(|t| t.path == p);
+                        if !exists {
+                            app.open_text_tabs.push(crate::app::TextTab { path: p.clone(), text, is_lossy: lossy, line_count: lines });
                         }
                     }
                 }
             }
         }
+    }
 
-        // Themes button
-        ui.menu_button(RichText::new("🎨 Themes").strong(), |ui| {
-            ui.set_min_width(300.0);
-            
-            let prev_theme = app.code_theme;
-            
-            ui.label(RichText::new("🎨 Code Themes").strong());
-            ui.add_space(8.0);
-            
-            for theme in CodeTheme::all() {
-                let is_selected = app.code_theme == *theme;
-                let mut button_text = RichText::new(theme.name());
-                if is_selected {
-                    button_text = button_text.strong();
-                }
-                
-                if ui.selectable_label(is_selected, button_text).clicked() {
-                    app.code_theme = *theme;
-                    ui.close_menu();
-                }
+    // Themes button
+    ui.menu_button(RichText::new("🎨 Themes").strong(), |ui| {
+        ui.set_min_width(300.0);
+        
+        let prev_theme = app.code_theme;
+        
+        ui.label(RichText::new("🎨 Code Themes").strong());
+        ui.add_space(8.0);
+        
+        for theme in CodeTheme::all() {
+            let is_selected = app.code_theme == *theme;
+            let mut button_text = RichText::new(theme.name());
+            if is_selected {
+                button_text = button_text.strong();
             }
             
-            if app.code_theme != prev_theme {
-                crate::settings::save_settings_to_disk(app);
+            if ui.selectable_label(is_selected, button_text).clicked() {
+                app.code_theme = *theme;
+                ui.close_menu();
             }
-        });
-
-        // Settings window toggle (more reliable than a dropdown on some platforms)
-        if ui.add(egui::Button::new(RichText::new("⚙️ Settings").strong()).fill(egui::Color32::from_rgb(107, 114, 128))).clicked() {
-            app.show_settings_window = true;
         }
-        if ui.add(egui::Button::new(RichText::new("ℹ️ About").strong()).fill(egui::Color32::from_rgb(107, 114, 128))).clicked() {
-            app.show_about = true;
+        
+        if app.code_theme != prev_theme {
+            crate::settings::save_settings_to_disk(app);
         }
-
-        // Clear button
-        let mut clear_button = egui::Button::new(RichText::new("🗑️ Clear").strong());
-        clear_button = clear_button.fill(egui::Color32::from_rgb(239, 68, 68)); // Red
-        if ui.add(clear_button).clicked() {
-            app.content = None;
-            app.current_path = None;
-            app.error_message = None;
-        }
-
-        // (global search was moved back to earlier position)
     });
+
+    // Settings window toggle (more reliable than a dropdown on some platforms)
+    if ui.add(egui::Button::new(RichText::new("⚙️ Settings").strong()).fill(egui::Color32::from_rgb(107, 114, 128))).clicked() {
+        app.show_settings_window = true;
+    }
+
+    // About button
+    if ui.add(egui::Button::new(RichText::new("ℹ️ About").strong()).fill(egui::Color32::from_rgb(107, 114, 128))).clicked() {
+        app.show_about = true;
+    }
+
+    // Clear button (also placed late)
+    let mut clear_button = egui::Button::new(RichText::new("🗑️ Clear").strong());
+    clear_button = clear_button.fill(egui::Color32::from_rgb(239, 68, 68)); // Red
+    if ui.add(clear_button).clicked() {
+        app.content = None;
+        app.current_path = None;
+        app.error_message = None;
+    }
+
+    // (global search was moved back to earlier position)
 
     // (image tabs moved into the unified top tab strip)
 
@@ -166,6 +165,13 @@ pub(crate) fn search_bar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp,
     // Modern search bar with better styling
     egui::Frame::group(ui.style()).show(ui, |ui| {
         ui.horizontal_wrapped(|ui| {
+            // Current file name (for both text and image modes)
+            if let Some(cur) = &app.current_path {
+                if let Some(name) = cur.file_name().and_then(|s| s.to_str()) {
+                    ui.label(RichText::new(name).strong());
+                    ui.add_space(12.0);
+                }
+            }
             // Search input (only for text files)
             if matches!(app.content, Some(crate::app::Content::Text(_))) {
                 ui.label(RichText::new("🔍 Find:").strong());

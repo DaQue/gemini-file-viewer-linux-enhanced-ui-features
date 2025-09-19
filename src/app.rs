@@ -405,6 +405,16 @@ impl eframe::App for FileViewerApp {
             self.viewport_initialized = true;
         }
 
+        // Track current viewport size so we can persist it on exit
+        if let Some(rect) = ctx.input(|i| i.viewport().inner_rect) {
+            let sz = rect.size();
+            // Avoid tiny oscillations
+            if (self.last_window_width - sz.x).abs() > 0.5 || (self.last_window_height - sz.y).abs() > 0.5 {
+                self.last_window_width = sz.x;
+                self.last_window_height = sz.y;
+            }
+        }
+
         let mut file_to_load: Option<PathBuf> = None;
 
         // Keyboard + mouse input (delegated)

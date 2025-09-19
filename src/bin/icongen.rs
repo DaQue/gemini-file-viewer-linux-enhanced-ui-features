@@ -31,7 +31,8 @@ fn build_app_icon_rgba(size: u32) -> (Vec<u8>, u32, u32) {
     let code2 = [0x22, 0xc5, 0x5e, 0xff];
     let code3 = [0xf4, 0x72, 0xb6, 0xff];
     let sun = [0xf5, 0x9e, 0x0b, 0xff];
-    let mount = [0x0f, 0x17, 0x2a, 0xff];
+    // Lighten mountain color substantially for an earlier, pre-sunset look
+    let mount = [0x8f, 0xb6, 0xff, 0xff];
 
     for y in 0..size {
         for x in 0..size {
@@ -78,7 +79,7 @@ fn build_app_icon_rgba(size: u32) -> (Vec<u8>, u32, u32) {
 fn main() {
     let out_dir = Path::new("assets").join("icons");
     fs::create_dir_all(&out_dir).expect("create assets/icons");
-    let sizes = [16u32, 32, 48, 64, 128, 256, 512];
+    let sizes = [16u32, 24, 32, 48, 64, 96, 128, 256, 384, 512];
     for &s in &sizes {
         let (rgba, w, h) = build_app_icon_rgba(s);
         let img = image::RgbaImage::from_vec(w, h, rgba).expect("rgba to image");

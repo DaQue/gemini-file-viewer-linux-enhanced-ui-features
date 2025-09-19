@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=GFV
+Comment=Gemini File Viewer
+Exec=/usr/local/bin/gfv %F
+Icon=gfv
+Terminal=false
+Categories=Utility;Development;
+StartupWMClass=gfv

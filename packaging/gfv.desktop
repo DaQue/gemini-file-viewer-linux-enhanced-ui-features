@@ -8,3 +8,4 @@ Icon=gfv
 Terminal=false
 Categories=Utility;Graphics;Development;
 StartupNotify=true
+StartupWMClass=gfv
