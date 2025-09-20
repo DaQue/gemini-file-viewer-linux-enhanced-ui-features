@@ -111,14 +111,14 @@ fn main() -> Result<(), eframe::Error> {
             .with_inner_size([1000.0, 700.0])
             .with_min_inner_size([900.0, 560.0])
             .with_resizable(true)
-            .with_title("gfv 2.0.2")
+            .with_title(format!("gfv {}", env!("CARGO_PKG_VERSION")))
             .with_icon(build_app_icon())
             .with_app_id("gfv"),
         ..Default::default()
     };
 
     eframe::run_native(
-        "gfv 2.0.2",
+        &format!("gfv {}", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| Ok(Box::new(FileViewerApp::new(cc))))
     )
