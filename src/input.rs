@@ -86,77 +86,36 @@ pub(crate) fn handle_input(
         }
 
         // Navigation with arrow keys for current content type
-        if (i.key_pressed(egui::Key::ArrowRight)
-            || (i.modifiers.alt && i.key_pressed(egui::Key::ArrowRight)))
-            && let Some(cur) = app.current_path.clone()
-        {
-            match app.content {
-                Some(crate::app::Content::Image(_)) => {
-                    if let Some(next) = crate::io::neighbor_image(&cur, true) {
-                        *file_to_load = Some(next);
-                    }
+        let mut queue_neighbor = |forward: bool| {
+            if let Some(cur) = app.current_path.as_deref() {
+                let next = match app.content.as_ref() {
+                    Some(crate::app::Content::Image(_)) => crate::io::neighbor_image(cur, forward),
+                    Some(crate::app::Content::Text(_)) => crate::io::neighbor_text(cur, forward),
+                    _ => None,
+                };
+                if let Some(path) = next {
+                    *file_to_load = Some(path);
                 }
-                Some(crate::app::Content::Text(_)) => {
-                    if let Some(next) = crate::io::neighbor_text(&cur, true) {
-                        *file_to_load = Some(next);
-                    }
-                }
-                _ => {}
             }
+        };
+
+        if i.key_pressed(egui::Key::ArrowRight)
+            || (i.modifiers.alt && i.key_pressed(egui::Key::ArrowRight))
+        {
+            queue_neighbor(true);
         }
-        if (i.key_pressed(egui::Key::ArrowLeft)
-            || (i.modifiers.alt && i.key_pressed(egui::Key::ArrowLeft)))
-            && let Some(cur) = app.current_path.clone()
+        if i.key_pressed(egui::Key::ArrowLeft)
+            || (i.modifiers.alt && i.key_pressed(egui::Key::ArrowLeft))
         {
-            match app.content {
-                Some(crate::app::Content::Image(_)) => {
-                    if let Some(prev) = crate::io::neighbor_image(&cur, false) {
-                        *file_to_load = Some(prev);
-                    }
-                }
-                Some(crate::app::Content::Text(_)) => {
-                    if let Some(prev) = crate::io::neighbor_text(&cur, false) {
-                        *file_to_load = Some(prev);
-                    }
-                }
-                _ => {}
-            }
+            queue_neighbor(false);
         }
         // Support '<' and '>' typed keys for both images and text
         for ev in &i.events {
             if let egui::Event::Text(t) = ev {
-                if t == ">" {
-                    if let Some(cur) = app.current_path.clone() {
-                        match app.content {
-                            Some(crate::app::Content::Image(_)) => {
-                                if let Some(next) = crate::io::neighbor_image(&cur, true) {
-                                    *file_to_load = Some(next);
-                                }
-                            }
-                            Some(crate::app::Content::Text(_)) => {
-                                if let Some(next) = crate::io::neighbor_text(&cur, true) {
-                                    *file_to_load = Some(next);
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                } else if t == "<"
-                    && let Some(cur) = app.current_path.clone()
-                {
-                    match app.content {
-                        Some(crate::app::Content::Image(_)) => {
-                            if let Some(prev) = crate::io::neighbor_image(&cur, false) {
-                                *file_to_load = Some(prev);
-                            }
-                        }
-                        Some(crate::app::Content::Text(_)) => {
-                            if let Some(prev) = crate::io::neighbor_text(&cur, false) {
-                                *file_to_load = Some(prev);
-                            }
-                        }
-                        _ => {}
-                    }
+                match t.as_str() {
+                    ">" => queue_neighbor(true),
+                    "<" => queue_neighbor(false),
+                    _ => {}
                 }
             }
         }

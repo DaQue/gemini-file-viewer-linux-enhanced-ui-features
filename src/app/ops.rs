@@ -26,14 +26,7 @@ impl FileViewerApp {
                         egui::TextureOptions::LINEAR,
                     );
                     // Track in image tabs
-                    let mut exists = false;
-                    for p in &self.open_image_tabs {
-                        if p == &path {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if !exists {
+                    if self.open_image_tabs.iter().all(|p| p != &path) {
                         self.open_image_tabs.push(path.clone());
                     }
                     self.active_image_tab = self.open_image_tabs.iter().position(|p| p == &path);
@@ -48,32 +41,21 @@ impl FileViewerApp {
                     self.text_line_count = lines;
                     self.text_is_lossy = lossy;
                     // Update or insert text tab
-                    let mut tab_idx_opt = None;
-                    for (idx, t) in self.open_text_tabs.iter().enumerate() {
-                        if t.path == path {
-                            tab_idx_opt = Some(idx);
-                            break;
+                    if let Some(idx) = self.open_text_tabs.iter().position(|t| t.path == path) {
+                        if let Some(existing) = self.open_text_tabs.get_mut(idx) {
+                            existing.text = text.clone();
+                            existing.is_lossy = lossy;
+                            existing.line_count = lines;
                         }
-                    }
-                    match tab_idx_opt {
-                        Some(idx) => {
-                            self.open_text_tabs[idx] = TextTab {
-                                path: path.clone(),
-                                text: text.clone(),
-                                is_lossy: lossy,
-                                line_count: lines,
-                            };
-                            self.active_text_tab = Some(idx);
-                        }
-                        None => {
-                            self.open_text_tabs.push(TextTab {
-                                path: path.clone(),
-                                text: text.clone(),
-                                is_lossy: lossy,
-                                line_count: lines,
-                            });
-                            self.active_text_tab = Some(self.open_text_tabs.len() - 1);
-                        }
+                        self.active_text_tab = Some(idx);
+                    } else {
+                        self.open_text_tabs.push(TextTab {
+                            path: path.clone(),
+                            text: text.clone(),
+                            is_lossy: lossy,
+                            line_count: lines,
+                        });
+                        self.active_text_tab = Some(self.open_text_tabs.len() - 1);
                     }
                     Ok(Content::Text(text))
                 }
@@ -140,14 +122,14 @@ impl FileViewerApp {
     }
 
     pub(crate) fn switch_to_text_tab(&mut self, tab_index: usize) {
-        if let Some(tab) = self.open_text_tabs.get(tab_index).cloned() {
+        if let Some(tab) = self.open_text_tabs.get(tab_index) {
             self.active_text_tab = Some(tab_index);
             self.current_path = Some(tab.path.clone());
             self.text_is_big =
                 tab.text.len() >= BIG_TEXT_CHAR_THRESHOLD || tab.line_count >= 50_000;
             self.text_line_count = tab.line_count;
             self.text_is_lossy = tab.is_lossy;
-            self.content = Some(Content::Text(tab.text));
+            self.content = Some(Content::Text(tab.text.clone()));
             // Snapshot session on switch
             self.snapshot_session();
             crate::settings::save_settings_to_disk(self);
