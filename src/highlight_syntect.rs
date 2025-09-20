@@ -1,4 +1,4 @@
-use eframe::egui::{self, text::LayoutJob, Color32, FontId};
+use eframe::egui::{self, Color32, FontId, text::LayoutJob};
 use std::sync::OnceLock;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style as SynStyle, Theme, ThemeSet};
@@ -22,15 +22,24 @@ fn choose_theme(ts: &ThemeSet, dark_mode: bool) -> &Theme {
     let dark_name = "base16-ocean.dark";
     let light_name = "InspiredGitHub";
     if dark_mode {
-        ts.themes.get(dark_name).or_else(|| ts.themes.values().next()).unwrap()
+        ts.themes
+            .get(dark_name)
+            .or_else(|| ts.themes.values().next())
+            .unwrap()
     } else {
-        ts.themes.get(light_name).or_else(|| ts.themes.values().next()).unwrap()
+        ts.themes
+            .get(light_name)
+            .or_else(|| ts.themes.values().next())
+            .unwrap()
     }
 }
 
 fn syntax_for_ext<'a>(ss: &'a SyntaxSet, ext: &str) -> &'a SyntaxReference {
-    if ext.is_empty() { return ss.find_syntax_plain_text(); }
-    ss.find_syntax_by_extension(ext).unwrap_or_else(|| ss.find_syntax_plain_text())
+    if ext.is_empty() {
+        return ss.find_syntax_plain_text();
+    }
+    ss.find_syntax_by_extension(ext)
+        .unwrap_or_else(|| ss.find_syntax_plain_text())
 }
 
 pub struct SyntectSession<'a> {
@@ -42,7 +51,9 @@ impl<'a> SyntectSession<'a> {
         let eng = engine();
         let syn = syntax_for_ext(&eng.ss, ext);
         let theme = choose_theme(&eng.ts, dark_mode);
-        SyntectSession { high: HighlightLines::new(syn, theme) }
+        SyntectSession {
+            high: HighlightLines::new(syn, theme),
+        }
     }
 
     pub fn append_line(&mut self, job: &mut LayoutJob, line: &str, font_id: FontId) {
@@ -51,12 +62,28 @@ impl<'a> SyntectSession<'a> {
             Ok(spans) => {
                 for (style, text) in spans {
                     let color = to_egui_color(style);
-                    job.append(text, 0.0, egui::TextFormat { font_id: font_id.clone(), color, ..Default::default() });
+                    job.append(
+                        text,
+                        0.0,
+                        egui::TextFormat {
+                            font_id: font_id.clone(),
+                            color,
+                            ..Default::default()
+                        },
+                    );
                 }
             }
             Err(_) => {
                 // Fallback: append plain text
-                job.append(line, 0.0, egui::TextFormat { font_id, color: Color32::WHITE, ..Default::default() });
+                job.append(
+                    line,
+                    0.0,
+                    egui::TextFormat {
+                        font_id,
+                        color: Color32::WHITE,
+                        ..Default::default()
+                    },
+                );
             }
         }
     }

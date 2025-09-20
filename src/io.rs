@@ -11,7 +11,10 @@ pub(crate) fn is_supported_image(path: &Path) -> bool {
         .and_then(|s| s.to_str())
         .unwrap_or("")
         .to_lowercase();
-    matches!(ext.as_str(), "png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp")
+    matches!(
+        ext.as_str(),
+        "png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp"
+    )
 }
 
 pub(crate) fn load_text(path: &Path) -> Result<(String, bool, usize), String> {
@@ -25,9 +28,7 @@ pub(crate) fn load_text(path: &Path) -> Result<(String, bool, usize), String> {
 pub(crate) fn load_image(path: &Path) -> Result<ColorImage, String> {
     // Pre-check dimensions to estimate texture memory before decoding
     if let Ok((w, h)) = image::image_dimensions(path) {
-        let est_bytes: usize = (w as usize)
-            .saturating_mul(h as usize)
-            .saturating_mul(4);
+        let est_bytes: usize = (w as usize).saturating_mul(h as usize).saturating_mul(4);
         if est_bytes > MAX_IMAGE_TEXTURE_BYTES {
             return Err(format!(
                 "Image too large: {}x{} (~{:.1} MB RGBA). Limit ~{:.0} MB",
@@ -43,10 +44,10 @@ pub(crate) fn load_image(path: &Path) -> Result<ColorImage, String> {
     let (width, height) = img.dimensions();
     let rgba = img.to_rgba8();
     let pixels = rgba.into_flat_samples();
-    Ok(ColorImage::from_rgba_unmultiplied([
-        width as _,
-        height as _,
-    ], pixels.as_slice()))
+    Ok(ColorImage::from_rgba_unmultiplied(
+        [width as _, height as _],
+        pixels.as_slice(),
+    ))
 }
 
 pub(crate) fn is_supported_text(path: &Path) -> bool {
@@ -63,15 +64,22 @@ pub(crate) fn is_supported_text(path: &Path) -> bool {
 
 pub(crate) fn neighbor_image(path: &Path, forward: bool) -> Option<PathBuf> {
     let parent = path.parent()?;
-    let mut images: Vec<PathBuf> = std::fs::read_dir(parent).ok()?
+    let mut images: Vec<PathBuf> = std::fs::read_dir(parent)
+        .ok()?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.is_file() && is_supported_image(p))
         .collect();
-    if images.is_empty() { return None; }
+    if images.is_empty() {
+        return None;
+    }
     images.sort();
     let current_name = path.file_name()?;
-    let idx = images.iter().position(|p| p.file_name() == Some(current_name))?;
-    if images.len() <= 1 { return None; }
+    let idx = images
+        .iter()
+        .position(|p| p.file_name() == Some(current_name))?;
+    if images.len() <= 1 {
+        return None;
+    }
     let next_idx = if forward {
         (idx + 1) % images.len()
     } else {
@@ -82,15 +90,22 @@ pub(crate) fn neighbor_image(path: &Path, forward: bool) -> Option<PathBuf> {
 
 pub(crate) fn neighbor_text(path: &Path, forward: bool) -> Option<PathBuf> {
     let parent = path.parent()?;
-    let mut texts: Vec<PathBuf> = std::fs::read_dir(parent).ok()?
+    let mut texts: Vec<PathBuf> = std::fs::read_dir(parent)
+        .ok()?
         .filter_map(|e| e.ok().map(|e| e.path()))
         .filter(|p| p.is_file() && is_supported_text(p))
         .collect();
-    if texts.is_empty() { return None; }
+    if texts.is_empty() {
+        return None;
+    }
     texts.sort();
     let current_name = path.file_name()?;
-    let idx = texts.iter().position(|p| p.file_name() == Some(current_name))?;
-    if texts.len() <= 1 { return None; }
+    let idx = texts
+        .iter()
+        .position(|p| p.file_name() == Some(current_name))?;
+    if texts.len() <= 1 {
+        return None;
+    }
     let next_idx = if forward {
         (idx + 1) % texts.len()
     } else {

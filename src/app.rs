@@ -1,11 +1,10 @@
-use eframe::egui;
 use crate::themes::CodeTheme;
+use eframe::egui;
 use egui::{RichText, TextureHandle};
-use std::fs;
 use rfd::FileDialog;
+use std::fs;
 use std::path::PathBuf;
-use std::sync::mpsc::{channel, Receiver, TryRecvError};
-use std::thread;
+use std::sync::mpsc::Receiver;
 
 const MAX_FILE_SIZE_BYTES: u64 = 10_000_000; // 10MB
 const MAX_RECENT_FILES: usize = 10;
@@ -35,8 +34,8 @@ pub struct GlobalSearchResult {
 }
 
 // Submodules housing larger method/trait impls to keep this file lean
-mod update;
 mod ops;
+mod update;
 
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)]
@@ -59,8 +58,8 @@ pub struct FileViewerApp {
     pub(crate) last_window_height: f32,
     pub(crate) text_zoom: f32,
     pub(crate) image_zoom: f32,
-        // Persist the last directory used for opening files
-        pub last_open_dir: Option<PathBuf>,
+    // Persist the last directory used for opening files
+    pub last_open_dir: Option<PathBuf>,
     #[serde(skip)]
     pub(crate) show_about: bool,
     #[serde(skip)]
@@ -168,11 +167,18 @@ impl FileViewerApp {
                     .recent_files
                     .last()
                     .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-                    .or_else(|| app
-                        .session_paths
-                        .get(app.session_active.unwrap_or(0).min(app.session_paths.len().saturating_sub(1)))
-                        .and_then(|p| p.parent().map(|d| d.to_path_buf())));
-                if let Some(dir) = cand.filter(|d| d.is_dir()) { app.last_open_dir = Some(dir); }
+                    .or_else(|| {
+                        app.session_paths
+                            .get(
+                                app.session_active
+                                    .unwrap_or(0)
+                                    .min(app.session_paths.len().saturating_sub(1)),
+                            )
+                            .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                    });
+                if let Some(dir) = cand.filter(|d| d.is_dir()) {
+                    app.last_open_dir = Some(dir);
+                }
             }
             return app;
         }
@@ -206,11 +212,18 @@ impl FileViewerApp {
                     .recent_files
                     .last()
                     .and_then(|p| p.parent().map(|d| d.to_path_buf()))
-                    .or_else(|| app
-                        .session_paths
-                        .get(app.session_active.unwrap_or(0).min(app.session_paths.len().saturating_sub(1)))
-                        .and_then(|p| p.parent().map(|d| d.to_path_buf())));
-                if let Some(dir) = cand.filter(|d| d.is_dir()) { app.last_open_dir = Some(dir); }
+                    .or_else(|| {
+                        app.session_paths
+                            .get(
+                                app.session_active
+                                    .unwrap_or(0)
+                                    .min(app.session_paths.len().saturating_sub(1)),
+                            )
+                            .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                    });
+                if let Some(dir) = cand.filter(|d| d.is_dir()) {
+                    app.last_open_dir = Some(dir);
+                }
             }
             return app;
         }

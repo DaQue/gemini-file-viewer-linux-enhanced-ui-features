@@ -1,73 +1,115 @@
 # TODO
 
-- [x] Integrate syntect-based syntax highlighting
-  - Wire `syntect` for tokenization/coloring; keep current lightweight highlighter as fallback for very large files
-  - Load syntaxes/themes (dump-load) at startup; map to existing `CodeTheme`
-  - Gate by file size and extension; add a setting to toggle syntect on/off
-  - Remove bespoke highlighter paths once parity is verified
-  - Status: syntect session integrated; uses defaults; toggle in Settings; remove “beta” label
+## ✅ COMPLETED FEATURES
 
-- [x] Multi-tab UI for text and images
-  - Render a tab strip; show file name and dirty state (future)
-  - Open subsequent files in new tabs; click to switch; middle-click/shortcut to close
-  - Persist and restore open tabs and active tab via settings (opt-in)
-  - Unified strip for text and image tabs; image tabs tracked by path
-  - One-shot "Reopen Session" action (toolbar and Recent window)
-  - Keyboard shortcuts: Next/Prev Tab, Close Tab, Reopen Closed Tab
-  - Status: text+image tab strip with close buttons; session restore (opt-in) implemented; one-shot reopen added
+- [x] **Syntect-based syntax highlighting** - FULLY IMPLEMENTED
+  - ✅ `syntect` integrated with tokenization/coloring
+  - ✅ Fallback to lightweight highlighter for large files
+  - ✅ Syntax themes loaded at startup; mapped to `CodeTheme`
+  - ✅ File size gating and toggle in Settings
+  - ✅ Toggle setting (`use_syntect`) available in UI
 
-- [ ] Clippy: remove remaining allows and refactor highlight module
-  - Introduce a `HighlightContext` struct to reduce argument counts
-  - Split `append_highlighted`/`token_highlight` into smaller helpers
-  - Replace nested conditionals with clearer flows; remove identical branches
-  - Convert iterator `while let` loops to `for` where appropriate
-  - Status: comment formatting deduped; `#[allow]` removed in highlight.rs; clippy nits remain in ui/app
+- [x] **Multi-tab UI for text and images** - FULLY IMPLEMENTED
+  - ✅ Tab strip with file names and close buttons
+  - ✅ Click to switch tabs; close buttons work
+  - ✅ Session restore functionality (opt-in via settings)
+  - ✅ Unified strip for text and image tabs
+  - ✅ "Reopen Session" button in toolbar
+  - ✅ Text and image tabs tracked separately
 
-- [ ] Global Search improvements
-  - Optional regex mode; toggleable case and whole-word already exist
-  - Virtualize result list for very large outputs; show per-file counts and grouping
-  - Option to search disk (folder) in addition to open tabs
-  - Status: Regex mode implemented (with error display; whole-word disabled in regex). Virtualization and folder search pending
+- [x] **Window sizing and persistence** - FULLY IMPLEMENTED
+  - ✅ Minimum width enforced to fit toolbar buttons
+  - ✅ Last window size restored on startup
+  - ✅ Size persistence across app restarts
 
-- [ ] File open UX
-  - Drag-and-drop files onto window to open (adds background text tabs; tracks image tabs)
-  - Keep non-blocking open; indicate when a dialog is in-flight (spinner). Toolbar button is blocking; Ctrl+O uses non-blocking
+- [x] **About dialog content** - FULLY IMPLEMENTED
+  - ✅ License text included
+  - ✅ Authors listed: David Queen, Allison Bayless
+  - ✅ Comprehensive keyboard shortcuts displayed
+  - ✅ Rich formatting with icons and sections
 
-- [ ] UI/UX polish
-  - Responsive toolbar layout; configurable placement of Global Search/Recent
-  - Compact Recent list items with icons; keyboard navigation
+- [x] **Keybindings window** - FULLY IMPLEMENTED
+  - ✅ Settings button opens keybindings window
+  - ✅ Comprehensive keyboard shortcuts listed
+  - ✅ Alt variants included for all shortcuts
+  - ✅ Resizable window with minimum width
+
+- [x] **App icon** - FULLY IMPLEMENTED
+  - ✅ Procedural icon generation at runtime
+  - ✅ PNG assets in `assets/icons/` directory
+  - ✅ Windows EXE icon embedding via `build.rs`
+  - ✅ Linux `.desktop` file integration
+
+- [x] **Drag-and-drop file opening** - FULLY IMPLEMENTED
+  - ✅ Drag files onto window to open
+  - ✅ Supports both text and image files
+  - ✅ Adds text files as background tabs
+  - ✅ Tracks image tabs without switching
+  - ✅ File type validation and error handling
+
+## 🔄 IN PROGRESS / PARTIAL
+
+- [ ] **Global Search improvements** - PARTIALLY IMPLEMENTED
+  - ✅ Regex mode with error display
+  - ✅ Case sensitive and whole word options
+  - ✅ Global search window with results
+  - ❌ Virtualize result list for large outputs
+  - ❌ Per-file counts and grouping
+  - ❌ Option to search disk (folder) in addition to open tabs
+
+## ❌ PENDING FEATURES
+
+- [ ] **Code cleanup and optimization**
+  - [x] Remove remaining clippy warnings
+  - [x] Refactor highlight module for better maintainability
+  - [x] Introduce `HighlightContext` struct to reduce argument counts
+  - [x] Split large functions into smaller helpers
+
+- [ ] **UI/UX polish**
+  - Responsive toolbar layout
+  - Configurable placement of Global Search/Recent buttons
+  - Compact Recent list items with icons
+  - Keyboard navigation for Recent files
   - Show file type icon and size in status bar for text files
 
-- [x] Window sizing and persistence
-  - Enforce a minimum width to fit all toolbar buttons
-  - Restore last window size on startup; don't go below minimum
-  - Status: min size enforced; last size fields stored; applied on startup
+- [ ] **Performance improvements**
+  - Background loading for very large text files
+  - Incremental rendering for huge files
+  - Cache line layouts for faster scrolling
+  - Optimize memory usage for large files
 
-- [x] About dialog content
-  - Include license: free to use with no warranty of usability or responsibility
-  - List authors: David Queen, Allison Bayless
-  - Status: text added in Settings → About
+- [ ] **Enhanced packaging**
+  - Linux AppImage packaging script
+  - macOS bundle metadata
+  - Automated release packaging
+  - Cross-platform build scripts
 
-- [x] Keybindings window
-  - Add button inside Settings to show keybindings; ensure minimum width but resizable
-  - Add keyboard shortcuts: Ctrl+, for Settings; F1 for About
-  - Status: expanded to include Alt variants
-
-- [ ] Performance
-  - Background loading for very large text files; incremental rendering
-  - Cache line layouts for faster scrolling on huge files
-
-- [ ] Packaging and versioning
-  - Bump crate version; align window title and Cargo.toml
-  - Add Linux/AppImage packaging script, Windows icon/RC, macOS bundle metadata
-  - Status: Windows EXE icon embedding via build.rs; Linux .desktop + icon wiring documented and installable
-
-- [ ] Testing
-  - Unit tests for `search::find_target_line` and count recomputation
+- [ ] **Testing infrastructure**
+  - [x] Unit tests for `search::find_target_line` and count recomputation
   - Integration tests for tab switching and global search navigation
   - Benchmarks for highlighter performance on large files
+  - UI automation tests
 
-- [x] Temporary app icon
-  - Add a placeholder app icon for window/taskbar and launcher entries
-  - Linux: `.desktop` file + PNG under `~/.local/share/icons`, set window icon via eframe options
-  - Status: procedural placeholder set at runtime; PNG exported at `assets/icon_256.png`; launcher wired; Windows EXE embeds icon on build
+## 🆕 NEW FEATURES TO CONSIDER
+
+- [ ] **Enhanced file navigation**
+  - File tree/sidebar for directory browsing
+  - Recent directories alongside recent files
+  - Bookmark favorite files/folders
+
+- [ ] **Advanced search capabilities**
+  - Search within specific file types
+  - Search history and saved searches
+  - Advanced regex patterns and filters
+
+- [ ] **Editor-like features**
+  - Basic text editing capabilities
+  - Find and replace functionality
+  - Line number jumping (Go to line)
+  - Text selection and copying
+
+- [ ] **Accessibility improvements**
+  - High contrast themes
+  - Font size scaling
+  - Keyboard-only navigation
+  - Screen reader support

@@ -27,3 +27,6 @@ codegen-units = 1
 panic = "abort"
 # Strip symbols if supported by toolchain (Cargo >= 1.84)
 strip = true
+
+[patch.crates-io]
+ashpd = { path = "vendor/ashpd" }

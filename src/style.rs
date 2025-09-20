@@ -32,9 +32,18 @@ pub(crate) fn apply_theme(app: &crate::app::FileViewerApp, ctx: &egui::Context) 
     style.spacing.button_padding = egui::vec2(16.0, 10.0);
     style.spacing.menu_margin = egui::Margin::same(8);
     style.spacing.window_margin = egui::Margin::same(16);
-    style.text_styles.insert(egui::TextStyle::Heading, egui::FontId::new(24.0, egui::FontFamily::Proportional));
-    style.text_styles.insert(egui::TextStyle::Body, egui::FontId::new(14.0, egui::FontFamily::Proportional));
-    style.text_styles.insert(egui::TextStyle::Monospace, egui::FontId::new(13.0, egui::FontFamily::Monospace));
+    style.text_styles.insert(
+        egui::TextStyle::Heading,
+        egui::FontId::new(24.0, egui::FontFamily::Proportional),
+    );
+    style.text_styles.insert(
+        egui::TextStyle::Body,
+        egui::FontId::new(14.0, egui::FontFamily::Proportional),
+    );
+    style.text_styles.insert(
+        egui::TextStyle::Monospace,
+        egui::FontId::new(13.0, egui::FontFamily::Monospace),
+    );
     style.visuals.button_frame = true;
     style.visuals.collapsing_header_frame = true;
     style.visuals = visuals;

@@ -28,7 +28,9 @@ impl eframe::App for FileViewerApp {
         if let Some(rect) = ctx.input(|i| i.viewport().inner_rect) {
             let sz = rect.size();
             // Avoid tiny oscillations
-            if (self.last_window_width - sz.x).abs() > 0.5 || (self.last_window_height - sz.y).abs() > 0.5 {
+            if (self.last_window_width - sz.x).abs() > 0.5
+                || (self.last_window_height - sz.y).abs() > 0.5
+            {
                 self.last_window_width = sz.x;
                 self.last_window_height = sz.y;
             }
@@ -48,14 +50,23 @@ impl eframe::App for FileViewerApp {
                 let mut extra_text_tabs: usize = 0;
                 for f in dropped.into_iter().take(20) {
                     if let Some(path) = f.path {
-                        if crate::io::is_supported_image(&path) || crate::io::is_supported_text(&path) {
+                        if crate::io::is_supported_image(&path)
+                            || crate::io::is_supported_text(&path)
+                        {
                             if !opened_first {
                                 file_to_load = Some(path);
                                 opened_first = true;
-                            } else if crate::io::is_supported_text(&path) && let Ok((text, lossy, lines)) = crate::io::load_text(&path) {
+                            } else if crate::io::is_supported_text(&path)
+                                && let Ok((text, lossy, lines)) = crate::io::load_text(&path)
+                            {
                                 // Add text as background tab without switching
                                 if !self.open_text_tabs.iter().any(|t| t.path == path) {
-                                    self.open_text_tabs.push(TextTab { path: path.clone(), text, is_lossy: lossy, line_count: lines });
+                                    self.open_text_tabs.push(TextTab {
+                                        path: path.clone(),
+                                        text,
+                                        is_lossy: lossy,
+                                        line_count: lines,
+                                    });
                                     extra_text_tabs += 1;
                                 }
                             } else if crate::io::is_supported_image(&path) {
@@ -72,7 +83,9 @@ impl eframe::App for FileViewerApp {
                 if extra_text_tabs > 0 && self.active_text_tab.is_none() {
                     // If no active tab yet, activate the last added
                     let last = self.open_text_tabs.len().saturating_sub(1);
-                    if self.open_text_tabs.get(last).is_some() { self.active_text_tab = Some(last); }
+                    if self.open_text_tabs.get(last).is_some() {
+                        self.active_text_tab = Some(last);
+                    }
                 }
             }
         }
@@ -84,7 +97,9 @@ impl eframe::App for FileViewerApp {
                     Ok(opt) => {
                         self.file_open_in_flight = false;
                         self.file_open_rx = None;
-                        if let Some(p) = opt { file_to_load = Some(p); }
+                        if let Some(p) = opt {
+                            file_to_load = Some(p);
+                        }
                     }
                     Err(TryRecvError::Empty) => {}
                     Err(TryRecvError::Disconnected) => {
@@ -109,13 +124,13 @@ impl eframe::App for FileViewerApp {
                         ui.add_space(12.0);
                         ui.label(RichText::new(format!("gfv {}", env!("CARGO_PKG_VERSION"))).heading().strong());
                         ui.add_space(16.0);
-                        
+
                         ui.separator();
                         ui.add_space(12.0);
-                        
+
                         ui.label(RichText::new("⌨️ Keyboard Shortcuts").strong());
                         ui.add_space(8.0);
-                        
+
                         ui.horizontal(|ui| {
                             ui.vertical(|ui| {
                                 ui.monospace(RichText::new("Ctrl+O").strong());
@@ -160,7 +175,10 @@ impl eframe::App for FileViewerApp {
                     });
                 });
         }
-        if self.show_settings_window { crate::ui::settings_window(ctx, self); crate::settings::save_settings_to_disk(self); }
+        if self.show_settings_window {
+            crate::ui::settings_window(ctx, self);
+            crate::settings::save_settings_to_disk(self);
+        }
         if toggle_dark {
             self.dark_mode = !self.dark_mode;
             self.apply_theme(ctx);
@@ -212,7 +230,9 @@ impl eframe::App for FileViewerApp {
         crate::ui::tab_strip(ctx, self);
 
         // Search Bar (for text files and images with navigation)
-        if matches!(self.content, Some(Content::Text(_))) || matches!(self.content, Some(Content::Image(_))) {
+        if matches!(self.content, Some(Content::Text(_)))
+            || matches!(self.content, Some(Content::Image(_)))
+        {
             egui::TopBottomPanel::top("searchbar").show(ctx, |ui| {
                 crate::ui::search_bar(ui, self, &mut file_to_load);
             });
@@ -235,7 +255,12 @@ impl eframe::App for FileViewerApp {
                         if let Ok((text, lossy, lines)) = crate::io::load_text(&p) {
                             let exists = self.open_text_tabs.iter().any(|t| t.path == p);
                             if !exists {
-                                self.open_text_tabs.push(TextTab { path: p.clone(), text, is_lossy: lossy, line_count: lines });
+                                self.open_text_tabs.push(TextTab {
+                                    path: p.clone(),
+                                    text,
+                                    is_lossy: lossy,
+                                    line_count: lines,
+                                });
                             }
                         }
                     } else if crate::io::is_supported_image(&p) {
@@ -271,4 +296,3 @@ impl eframe::App for FileViewerApp {
         }
     }
 }
-

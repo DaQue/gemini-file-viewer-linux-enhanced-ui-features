@@ -22,4 +22,3 @@ pub(crate) fn save_settings_to_disk(app: &crate::app::FileViewerApp) {
         }
     }
 }
-

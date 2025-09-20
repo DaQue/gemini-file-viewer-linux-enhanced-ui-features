@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::mpsc::channel;
 
 impl FileViewerApp {
     pub fn load_file(&mut self, path: PathBuf, ctx: &egui::Context) {
@@ -26,8 +27,15 @@ impl FileViewerApp {
                     );
                     // Track in image tabs
                     let mut exists = false;
-                    for p in &self.open_image_tabs { if p == &path { exists = true; break; } }
-                    if !exists { self.open_image_tabs.push(path.clone()); }
+                    for p in &self.open_image_tabs {
+                        if p == &path {
+                            exists = true;
+                            break;
+                        }
+                    }
+                    if !exists {
+                        self.open_image_tabs.push(path.clone());
+                    }
                     self.active_image_tab = self.open_image_tabs.iter().position(|p| p == &path);
                     Ok(Content::Image(texture))
                 }
@@ -42,15 +50,28 @@ impl FileViewerApp {
                     // Update or insert text tab
                     let mut tab_idx_opt = None;
                     for (idx, t) in self.open_text_tabs.iter().enumerate() {
-                        if t.path == path { tab_idx_opt = Some(idx); break; }
+                        if t.path == path {
+                            tab_idx_opt = Some(idx);
+                            break;
+                        }
                     }
                     match tab_idx_opt {
                         Some(idx) => {
-                            self.open_text_tabs[idx] = TextTab { path: path.clone(), text: text.clone(), is_lossy: lossy, line_count: lines };
+                            self.open_text_tabs[idx] = TextTab {
+                                path: path.clone(),
+                                text: text.clone(),
+                                is_lossy: lossy,
+                                line_count: lines,
+                            };
                             self.active_text_tab = Some(idx);
                         }
                         None => {
-                            self.open_text_tabs.push(TextTab { path: path.clone(), text: text.clone(), is_lossy: lossy, line_count: lines });
+                            self.open_text_tabs.push(TextTab {
+                                path: path.clone(),
+                                text: text.clone(),
+                                is_lossy: lossy,
+                                line_count: lines,
+                            });
                             self.active_text_tab = Some(self.open_text_tabs.len() - 1);
                         }
                     }
@@ -65,7 +86,9 @@ impl FileViewerApp {
                 self.content = Some(content);
                 self.current_path = Some(path.clone());
                 // Remember the directory of the last opened file
-                if let Some(parent) = path.parent() { self.last_open_dir = Some(parent.to_path_buf()); }
+                if let Some(parent) = path.parent() {
+                    self.last_open_dir = Some(parent.to_path_buf());
+                }
                 // Deduplicate and push to recents
                 self.recent_files.retain(|p| p != &path);
                 self.recent_files.push(path);
@@ -82,17 +105,35 @@ impl FileViewerApp {
     }
 
     pub(crate) fn start_open_file_dialog(&mut self) {
-        if self.file_open_in_flight { return; }
+        if self.file_open_in_flight {
+            return;
+        }
         self.file_open_in_flight = true;
         let (tx, rx) = channel::<Option<PathBuf>>();
         self.file_open_rx = Some(rx);
-        let last_dir = self.current_path.as_ref().and_then(|p| p.parent()).map(|d| d.to_path_buf()).or_else(|| self.last_open_dir.clone());
+        let last_dir = self
+            .current_path
+            .as_ref()
+            .and_then(|p| p.parent())
+            .map(|d| d.to_path_buf())
+            .or_else(|| self.last_open_dir.clone());
         std::thread::spawn(move || {
             let mut dlg = FileDialog::new()
-                .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
-                .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
-                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"]);
-            if let Some(dir) = last_dir { dlg = dlg.set_directory(dir); }
+                .add_filter(
+                    "All Supported",
+                    &[
+                        "txt", "rs", "py", "toml", "md", "json", "js", "html", "css", "png", "jpg",
+                        "jpeg", "gif", "bmp", "webp",
+                    ],
+                )
+                .add_filter("Images", &["png", "jpg", "jpeg", "gif", "bmp", "webp"])
+                .add_filter(
+                    "Text/Source",
+                    &["txt", "rs", "py", "toml", "md", "json", "js", "html", "css"],
+                );
+            if let Some(dir) = last_dir {
+                dlg = dlg.set_directory(dir);
+            }
             let picked = dlg.pick_file();
             let _ = tx.send(picked);
         });
@@ -102,7 +143,8 @@ impl FileViewerApp {
         if let Some(tab) = self.open_text_tabs.get(tab_index).cloned() {
             self.active_text_tab = Some(tab_index);
             self.current_path = Some(tab.path.clone());
-            self.text_is_big = tab.text.len() >= BIG_TEXT_CHAR_THRESHOLD || tab.line_count >= 50_000;
+            self.text_is_big =
+                tab.text.len() >= BIG_TEXT_CHAR_THRESHOLD || tab.line_count >= 50_000;
             self.text_line_count = tab.line_count;
             self.text_is_lossy = tab.is_lossy;
             self.content = Some(Content::Text(tab.text));
@@ -115,29 +157,37 @@ impl FileViewerApp {
     pub(crate) fn recompute_global_search(&mut self) {
         self.global_results.clear();
         self.global_error = None;
-        match crate::search::global_search(&self.open_text_tabs, &self.global_query, self.global_case_sensitive, self.global_whole_word, self.global_regex) {
+        match crate::search::global_search(
+            &self.open_text_tabs,
+            &self.global_query,
+            self.global_case_sensitive,
+            self.global_whole_word,
+            self.global_regex,
+        ) {
             Ok(res) => self.global_results = res,
-            Err(e) => { self.global_error = Some(e); }
+            Err(e) => {
+                self.global_error = Some(e);
+            }
         }
     }
 
     pub(crate) fn snapshot_session(&mut self) {
         // Build session_paths from open text tabs plus current path (for images/non-text)
         let mut paths: Vec<PathBuf> = self.open_text_tabs.iter().map(|t| t.path.clone()).collect();
-        if let Some(cur) = self.current_path.clone() {
-            let is_text = crate::io::is_supported_text(&cur);
-            if !is_text {
-                if !paths.contains(&cur) {
-                    paths.push(cur);
-                }
-            }
+        if let Some(cur) = self.current_path.clone()
+            && !crate::io::is_supported_text(&cur)
+            && !paths.contains(&cur)
+        {
+            paths.push(cur);
         }
         // Filter out non-existing files
         paths.retain(|p| p.exists());
         // Active index is current_path in paths if present
-        let active = self.current_path.as_ref().and_then(|cur| paths.iter().position(|p| p == cur));
+        let active = self
+            .current_path
+            .as_ref()
+            .and_then(|cur| paths.iter().position(|p| p == cur));
         self.session_paths = paths;
         self.session_active = active;
     }
 }
-
