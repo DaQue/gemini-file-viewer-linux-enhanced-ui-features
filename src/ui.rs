@@ -11,8 +11,6 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
         ui.label(RichText::new("📁").size(20.0));
         ui.add_space(8.0);
         ui.label(RichText::new("gfv").heading().strong());
-        ui.add_space(8.0);
-        ui.label(RichText::new("Pre-beta").weak().small());
     });
     
     ui.add_space(12.0);
