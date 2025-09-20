@@ -24,14 +24,8 @@ pub(crate) fn toolbar(ui: &mut egui::Ui, app: &mut crate::app::FileViewerApp, _c
     open_button = open_button.fill(egui::Color32::from_rgb(34, 197, 94)); // Green
     let open_clicked = ui.add_enabled(!app.file_open_in_flight, open_button).clicked();
     if open_clicked {
-        // Use blocking dialog here for reliability
-        if let Some(path) = rfd::FileDialog::new()
-            .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
-            .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
-            .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
-            .pick_file() {
-            *file_to_load = Some(path);
-        }
+        // Use the unified non-blocking dialog to avoid re-entrancy crashes
+        app.start_open_file_dialog();
     }
     if app.file_open_in_flight {
         ui.add_space(8.0);

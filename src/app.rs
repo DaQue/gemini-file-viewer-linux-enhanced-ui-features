@@ -55,6 +55,8 @@ pub struct FileViewerApp {
     pub(crate) last_window_height: f32,
     pub(crate) text_zoom: f32,
     pub(crate) image_zoom: f32,
+        // Persist the last directory used for opening files
+        pub last_open_dir: Option<PathBuf>,
     #[serde(skip)]
     pub(crate) show_about: bool,
     #[serde(skip)]
@@ -156,6 +158,18 @@ impl FileViewerApp {
             app.file_open_rx = None;
             app.file_open_in_flight = false;
             app.viewport_initialized = false;
+            // Derive a sensible default for last_open_dir if missing
+            if app.last_open_dir.is_none() {
+                let cand = app
+                    .recent_files
+                    .last()
+                    .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                    .or_else(|| app
+                        .session_paths
+                        .get(app.session_active.unwrap_or(0).min(app.session_paths.len().saturating_sub(1)))
+                        .and_then(|p| p.parent().map(|d| d.to_path_buf())));
+                if let Some(dir) = cand.filter(|d| d.is_dir()) { app.last_open_dir = Some(dir); }
+            }
             return app;
         }
         if let Some(mut app) = crate::settings::load_settings_from_disk() {
@@ -182,6 +196,18 @@ impl FileViewerApp {
             app.file_open_rx = None;
             app.file_open_in_flight = false;
             app.viewport_initialized = false;
+            // Derive a sensible default for last_open_dir if missing
+            if app.last_open_dir.is_none() {
+                let cand = app
+                    .recent_files
+                    .last()
+                    .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+                    .or_else(|| app
+                        .session_paths
+                        .get(app.session_active.unwrap_or(0).min(app.session_paths.len().saturating_sub(1)))
+                        .and_then(|p| p.parent().map(|d| d.to_path_buf())));
+                if let Some(dir) = cand.filter(|d| d.is_dir()) { app.last_open_dir = Some(dir); }
+            }
             return app;
         }
         Default::default()
@@ -256,6 +282,8 @@ impl FileViewerApp {
             Ok(content) => {
                 self.content = Some(content);
                 self.current_path = Some(path.clone());
+                // Remember the directory of the last opened file
+                if let Some(parent) = path.parent() { self.last_open_dir = Some(parent.to_path_buf()); }
                 // Deduplicate and push to recents
                 self.recent_files.retain(|p| p != &path);
                 self.recent_files.push(path);
@@ -276,12 +304,14 @@ impl FileViewerApp {
         self.file_open_in_flight = true;
         let (tx, rx) = channel::<Option<PathBuf>>();
         self.file_open_rx = Some(rx);
+        let last_dir = self.current_path.as_ref().and_then(|p| p.parent()).map(|d| d.to_path_buf()).or_else(|| self.last_open_dir.clone());
         thread::spawn(move || {
-            let picked = FileDialog::new()
+            let mut dlg = FileDialog::new()
                 .add_filter("All Supported", &["txt","rs","py","toml","md","json","js","html","css","png","jpg","jpeg","gif","bmp","webp"])
                 .add_filter("Images", &["png","jpg","jpeg","gif","bmp","webp"])
-                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"])
-                .pick_file();
+                .add_filter("Text/Source", &["txt","rs","py","toml","md","json","js","html","css"]);
+            if let Some(dir) = last_dir { dlg = dlg.set_directory(dir); }
+            let picked = dlg.pick_file();
             let _ = tx.send(picked);
         });
     }
@@ -348,6 +378,7 @@ impl Default for FileViewerApp {
             last_window_height: 700.0,
             text_zoom: 1.0,
             image_zoom: 1.0,
+            last_open_dir: None,
             show_about: false,
             show_settings_window: false,
             show_keybindings: false,
