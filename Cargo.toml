@@ -1,9 +1,15 @@
 [package]
 name = "gfv"
-version = "2.0.4"
+version = "2.0.5"
 edition = "2024"
 build = "build.rs"
 default-run = "gfv"
+
+description = "Lightweight desktop viewer for text/code and images (egui/eframe)"
+license = "MIT"
+repository = "https://github.com/DaQue/gemini-file-viewer-linux-enhanced-ui-features"
+readme = "README.md"
+rust-version = "1.85"
 
 [dependencies]
 eframe = "0.31.0"

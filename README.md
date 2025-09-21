@@ -1,7 +1,7 @@
 gfv (Linux)
 
-Pre-beta
-- This app is currently in pre-beta. Features and UI may change and bugs are expected. Please report issues and suggestions.
+Stable
+- gfv is stable and actively maintained. Please report issues and suggestions.
 
 Project status
 - This repository is the canonical home for GFV. Older GitHub repositories such as
@@ -9,7 +9,7 @@ Project status
   [`DaQue/gemini-file-viewer-linux`](https://github.com/DaQue/gemini-file-viewer-linux), and
   [`DaQue/file-viewer2`](https://github.com/DaQue/file-viewer2) are now archived and kept only for
   historical reference.
-- Latest release: [v2.0.4](https://github.com/DaQue/gemini-file-viewer-linux-enhanced-ui-features/releases/tag/v2.0.4)
+- Latest release: [v2.0.5](https://github.com/DaQue/gemini-file-viewer-linux-enhanced-ui-features/releases/tag/v2.0.5)
 
 A lightweight desktop viewer for text/code and images, built with egui/eframe. This variant is set up for Linux builds with small, portable binaries.
 

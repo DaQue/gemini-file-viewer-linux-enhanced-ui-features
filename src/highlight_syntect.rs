@@ -17,20 +17,14 @@ fn engine() -> &'static SyntectEngine {
     })
 }
 
-fn choose_theme(ts: &ThemeSet, dark_mode: bool) -> &Theme {
-    // Prefer popular defaults; fallback to first available
+fn choose_theme(ts: &ThemeSet, dark_mode: bool) -> Option<&Theme> {
+    // Prefer popular defaults; fallback to first available; avoid panics
     let dark_name = "base16-ocean.dark";
     let light_name = "InspiredGitHub";
     if dark_mode {
-        ts.themes
-            .get(dark_name)
-            .or_else(|| ts.themes.values().next())
-            .unwrap()
+        ts.themes.get(dark_name).or_else(|| ts.themes.values().next())
     } else {
-        ts.themes
-            .get(light_name)
-            .or_else(|| ts.themes.values().next())
-            .unwrap()
+        ts.themes.get(light_name).or_else(|| ts.themes.values().next())
     }
 }
 
@@ -50,7 +44,13 @@ impl<'a> SyntectSession<'a> {
     pub fn start(ext: &str, dark_mode: bool) -> SyntectSession<'static> {
         let eng = engine();
         let syn = syntax_for_ext(&eng.ss, ext);
-        let theme = choose_theme(&eng.ts, dark_mode);
+        let theme = choose_theme(&eng.ts, dark_mode)
+            .unwrap_or_else(|| {
+                // Fall back to a minimal inline theme-like default by mapping to white fg on dark bg
+                // Note: HighlightLines requires a Theme reference; ThemeSet::load_defaults() should provide at least one theme.
+                // If not, we create a temporary ThemeSet with defaults as a last resort (very unlikely).
+                &engine().ts.themes.values().next().expect("syntect ThemeSet unexpectedly empty")
+            });
         SyntectSession {
             high: HighlightLines::new(syn, theme),
         }

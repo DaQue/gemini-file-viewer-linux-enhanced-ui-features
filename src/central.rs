@@ -50,7 +50,7 @@ pub(crate) fn render_central_panel(ui: &mut egui::Ui, app: &mut crate::app::File
                                 let mut target_rect: Option<egui::Rect> = None;
                                 let mut syntect_session = if app.use_syntect && do_highlight {
                                     Some(crate::highlight_syntect::SyntectSession::start(
-                                        &ext, true,
+                                        &ext, app.dark_mode,
                                     ))
                                 } else {
                                     None

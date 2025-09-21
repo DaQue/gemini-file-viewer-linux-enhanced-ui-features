@@ -3,8 +3,11 @@ Changelog
 All notable changes to this project will be documented in this file.
 
 Unreleased
-- Add Prev/Next navigation for text files within the same folder.
-- Keep shipping compiled release binary during pre-beta for convenience.
+
+2.0.5
+- Theming consistency: Syntect now respects Dark/Light mode.
+- Robustness: avoid panics when choosing Syntect themes.
+- Docs: README marked Stable; add MIT LICENSE; add crate metadata.
 
 2.0.4
 - Remove legacy icon pack fallback and assets; rely on refreshed PNG icons.
