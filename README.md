@@ -40,6 +40,18 @@ Build
   cargo build
   ./target/debug/gfv
 
+Install
+- Linux (user scope):
+  1. Ensure `icon_pack.zip` is present in the repo root.
+  2. ./scripts/build-release.sh
+  3. ./scripts/update-desktop-icons.sh (installs icons + desktop entry under `~/.local`).
+  4. Launch via `gfv` in your app list or `target/release/gfv`.
+- Windows:
+  1. Place `icon_pack.zip` beside the repository.
+  2. Native toolchain: `powershell -ExecutionPolicy Bypass -File scripts/build-windows.ps1`.
+     Cross (from Linux): `bash scripts/build-windows-mingw.sh` (requires mingw-w64 + target).
+  3. Grab the zip in `releases/` and extract/run `gfv.exe`.
+
 Portable-ish (musl)
 - Install musl target and tools:
   rustup target add x86_64-unknown-linux-musl
@@ -67,3 +79,5 @@ Scripts
 - scripts/install-deps-ubuntu.sh: Installs common build deps on Ubuntu/Debian.
 - scripts/build-release.sh: Builds size-optimized release.
 - scripts/build-musl.sh: Builds a musl release (adds target if missing).
+- scripts/refresh-icons.sh: Syncs `assets/icons/` from `icon_pack.zip` (called automatically by other build scripts; run manually after updating the pack).
+- scripts/update-desktop-icons.sh: Refreshes icons, clears cached copies under `~/.local/share/icons/hicolor`, and reinstalls the desktop entry.

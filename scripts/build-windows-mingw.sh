@@ -16,6 +16,9 @@ OUT_DIR="releases"
 echo "Ensuring Rust target ${TARGET} is installed..."
 rustup target add "${TARGET}" >/dev/null 2>&1 || true
 
+echo "Refreshing icon assets from icon_pack.zip..."
+./scripts/refresh-icons.sh
+
 echo "Building release for ${TARGET}..."
 cargo build --release --target "${TARGET}"
 
@@ -36,4 +39,3 @@ zip -9 "${REPO_ROOT}/${ZIP}" gfv.exe >/dev/null
 cd "${REPO_ROOT}"
 sha256sum "${ZIP}" | awk '{print $1"  "$2}' > "${OUT_DIR}/SHA256SUMS-${VER}-windows.txt"
 echo "Done: ${ZIP}"
-
