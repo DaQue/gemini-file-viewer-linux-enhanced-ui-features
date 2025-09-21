@@ -6,13 +6,24 @@ set -euo pipefail
 APP_NAME="gfv"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN_PATH="${REPO_ROOT}/target/release/gfv"
-# Prefer freshly generated icons from assets/icons; fallback to gfv_icon_pack if missing
+
+TMP_ICON_DIR=""
+cleanup() {
+  if [[ -n "${TMP_ICON_DIR}" && -d "${TMP_ICON_DIR}" ]]; then
+    rm -rf "${TMP_ICON_DIR}"
+  fi
+}
+trap cleanup EXIT
+
+# Prefer freshly generated icons from assets/icons; fall back to icon_pack.zip.
 if [[ -d "${REPO_ROOT}/assets/icons" ]]; then
   ICON_DIR="${REPO_ROOT}/assets/icons"
-elif [[ -d "${REPO_ROOT}/gfv_icon_pack/icons/png" ]]; then
-  ICON_DIR="${REPO_ROOT}/gfv_icon_pack/icons/png"
+elif [[ -f "${REPO_ROOT}/icon_pack.zip" ]]; then
+  TMP_ICON_DIR="$(mktemp -d)"
+  unzip -q "${REPO_ROOT}/icon_pack.zip" -d "${TMP_ICON_DIR}"
+  ICON_DIR="${TMP_ICON_DIR}"
 else
-  echo "No icon directory found; expected assets/icons or gfv_icon_pack/icons/png" >&2
+  echo "No icon directory found; expected assets/icons or icon_pack.zip" >&2
   exit 1
 fi
 
@@ -22,7 +33,10 @@ XDG_APPS="${HOME}/.local/share/applications"
 echo "Installing icons to ${XDG_ICONS} (prefer assets; fallback to pack)..."
 for size in 16 24 32 48 64 96 128 256 384 512; do
   src="${REPO_ROOT}/assets/icons/icon_${size}.png"
-  [[ -f "${src}" ]] || src="${REPO_ROOT}/gfv_icon_pack/icons/png/icon_${size}.png"
+  if [[ ! -f "${src}" ]]; then
+    alt="${ICON_DIR}/icon_${size}.png"
+    [[ -f "${alt}" ]] && src="${alt}"
+  fi
   dest_dir="${XDG_ICONS}/${size}x${size}/apps"
   mkdir -p "${dest_dir}"
   if [[ -f "${src}" ]]; then

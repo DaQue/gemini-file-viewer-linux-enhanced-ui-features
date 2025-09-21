@@ -6,6 +6,8 @@ Unreleased
 - Add Prev/Next navigation for text files within the same folder.
 - Keep shipping compiled release binary during pre-beta for convenience.
 
+2.0.4
+- Remove legacy icon pack fallback and assets; rely on refreshed PNG icons.
+
 0.1.0 (Pre-beta)
 - Initial pre-beta state with image viewing, text viewing, search, and basic settings.
-

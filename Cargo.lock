@@ -635,12 +635,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "byteorder"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
-
-[[package]]
 name = "byteorder-lite"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1438,11 +1432,10 @@ dependencies = [
 
 [[package]]
 name = "gfv"
-version = "2.0.3"
+version = "2.0.4"
 dependencies = [
  "directories",
  "eframe",
- "ico",
  "image",
  "regex",
  "rfd",
@@ -1632,16 +1625,6 @@ name = "hexf-parse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
-
-[[package]]
-name = "ico"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3804960be0bb5e4edb1e1ad67afd321a9ecfd875c3e65c099468fd2717d7cae"
-dependencies = [
- "byteorder",
- "png",
-]
 
 [[package]]
 name = "icu_collections"
